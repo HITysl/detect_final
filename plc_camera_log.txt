@@ -1,0 +1,14 @@
+2025-04-16 14:43:05,571: INFO: try_configure succeeded on attempt 1
+2025-04-16 14:43:05,579: INFO: PLC connected
+2025-04-16 14:43:10,580: ERROR: Failed to start PLC on attempt 1/3: ADSError: timeout elapsed (1861). 
+2025-04-16 14:43:15,580: INFO: PLC connected
+2025-04-16 14:43:17,669: INFO: bInspection_PosLow_Start: False:2025-04-16 06:57:23.144000, 低位检测开始！
+2025-04-16 14:43:17,672: INFO: try_start_plc succeeded on attempt 2
+2025-04-16 14:43:17,672: INFO: Starting capture at Low position
+2025-04-16 14:43:17,679: INFO: bInspection_PosHigh_Start: False:2025-04-16 06:57:23.154000, 高位检测开始！
+2025-04-16 14:49:58,260: INFO: try_configure succeeded on attempt 1
+2025-04-16 14:49:58,269: INFO: PLC connected
+2025-04-16 14:49:58,329: INFO: Low position detection signal received: False at 2025-04-16 07:04:03.814000
+2025-04-16 14:49:58,339: INFO: try_start_plc succeeded on attempt 1
+2025-04-16 14:49:58,339: INFO: Starting low position detection
+2025-04-16 14:49:58,350: INFO: High position detection signal received: False at 2025-04-16 07:04:03.834000
