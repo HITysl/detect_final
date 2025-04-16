@@ -22,23 +22,29 @@ last_high_start_flag_value = False
 low_pos_done_flag = False
 high_pos_done_flag = False
 
-def retry(func, max_retries=3, retry_interval=5, error_msg="Operation failed"):
+def retry(func, retry_interval=5, error_msg="Operation failed"):
     """
-    重试装饰器，用于相机初始化和 PLC 连接。
+    重试装饰器，用于相机初始化和 PLC 连接，无限重试，每分钟提示一次错误。
     """
-    for attempt in range(1, max_retries + 1):
+    attempt = 1
+    last_error_time = time.time()
+    ERROR_CHECK_INTERVAL = 60  # 每60秒检查一次是否需要提示错误
+
+    while True:
         try:
             result = func()
             logging.info(f"{func.__name__} succeeded on attempt {attempt}")
             return result
         except Exception as e:
-            logging.error(f"{error_msg} on attempt {attempt}/{max_retries}: {e}")
-            if attempt == max_retries:
-                logging.critical(f"{error_msg} after {max_retries} attempts, exiting")
-                print(f"{error_msg} after {max_retries} attempts, exiting")
-                sys.exit(1)
+            logging.error(f"{error_msg} on attempt {attempt}: {e}")
+            current_time = time.time()
+            # 每60秒记录一次错误并打印提示
+            if current_time - last_error_time >= ERROR_CHECK_INTERVAL:
+                logging.error(f"{error_msg} after {attempt} attempts, continuing to retry")
+                print(f"{error_msg} after {attempt} attempts, continuing to retry")
+                last_error_time = current_time
+            attempt += 1
             time.sleep(retry_interval)
-    return False
 
 class CameraHandler:
     ESC_KEY = 27
@@ -75,7 +81,6 @@ class CameraHandler:
 
         return retry(
             try_configure,
-            max_retries=3,
             retry_interval=5,
             error_msg="Failed to configure camera"
         )
@@ -133,7 +138,6 @@ class CameraHandler:
 
         return retry(
             try_start_plc,
-            max_retries=3,
             retry_interval=5,
             error_msg="Failed to start PLC"
         )
@@ -160,7 +164,7 @@ class CameraHandler:
 
         return color_image, depth_image, depth_data_out
 
-    def capture_images(self, timeout=30):
+    def capture_images(self, timeout=100):
         global low_pos_done_flag, high_pos_done_flag
         # 确保 images 文件夹存在
         save_dir = "images"
@@ -171,6 +175,9 @@ class CameraHandler:
         logging.info("Starting low position detection")
         print("开始低位检测")
         start_time = time.time()
+        last_warning_time = start_time
+        WARNING_CHECK_INTERVAL = 60  # 每60秒检查一次是否需要提示警告
+
         while True:
             color_image, depth_image, depth_data = self.get_frames()
             if color_image is None or depth_image is None:
@@ -206,12 +213,12 @@ class CameraHandler:
                 depth_low = depth_data
                 break
 
-            # 检查超时
-            if time.time() - start_time > timeout:
-                print("低位拍摄超时")
-                logging.warning(f"Low position capture timed out after {timeout} seconds")
-                cv2.destroyWindow("Low Preview")
-                return None, None, None, None
+            # 每60秒记录警告并打印提示
+            current_time = time.time()
+            if current_time - last_warning_time >= WARNING_CHECK_INTERVAL:
+                logging.warning(f"Still waiting for low position signal after {int(current_time - start_time)} seconds")
+                print(f"仍在等待低位信号，已等待 {int(current_time - start_time)} 秒")
+                last_warning_time = current_time
 
             # 检查退出键
             if key == ord('q') or key == self.ESC_KEY:
@@ -224,6 +231,8 @@ class CameraHandler:
         logging.info("Starting high position detection")
         print("开始高位检测")
         start_time = time.time()
+        last_warning_time = start_time
+
         while True:
             color_image, depth_image, depth_data = self.get_frames()
             if color_image is None or depth_image is None:
@@ -232,6 +241,7 @@ class CameraHandler:
             cv2.imshow("High Preview", resized_color_image)
             key = cv2.waitKey(1)
 
+            # 检查高位信号
             if high_pos_done_flag:
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"High_colour_{timestamp}.png")
@@ -253,12 +263,12 @@ class CameraHandler:
 
                 return color_low, depth_low, color_image, depth_data
 
-            # 检查超时
-            if time.time() - start_time > timeout:
-                print("高位拍摄超时")
-                logging.warning(f"High position capture timed out after {timeout} seconds")
-                cv2.destroyWindow("High Preview")
-                return None, None, None, None
+            # 每60秒记录警告并打印提示
+            current_time = time.time()
+            if current_time - last_warning_time >= WARNING_CHECK_INTERVAL:
+                logging.warning(f"Still waiting for high position signal after {int(current_time - start_time)} seconds")
+                print(f"仍在等待高位信号，已等待 {int(current_time - start_time)} 秒")
+                last_warning_time = current_time
 
             # 检查退出键
             if key == ord('q') or key == self.ESC_KEY:
