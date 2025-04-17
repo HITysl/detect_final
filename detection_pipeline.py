@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import numpy as np
 import open3d as o3d
@@ -43,29 +45,55 @@ def save_image(image: np.ndarray, img_type: str):
 
 
 def save_point_cloud_screenshot(pcd: o3d.geometry.PointCloud, pcd_type: str):
-    """Save point cloud screenshot with timestamp."""
+    """Save point cloud screenshot from X-O-Z plane (front view along -Y direction)."""
     timestamp = get_timestamp()
     filename = os.path.join(SAVE_DIR, f"{pcd_type}_{timestamp}.png")
 
     vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name=pcd_type, visible=False)  # Offscreen rendering
+    vis.create_window(window_name=pcd_type, visible=False)
     vis.add_geometry(pcd)
+
+    # 计算点云中心作为注视点
+    points = np.asarray(pcd.points)
+    center = np.mean(points, axis=0) if points.size else [0, 0, 0]
+
+    # 设置相机从 Y 负方向看过去，Z 朝上（即 X-O-Z 平面）
+    view_control = vis.get_view_control()
+    view_control.set_front([0, -1, 0])    # 从深度方向往里看
+    view_control.set_up([0, 0, 1])        # 上方向为 Z
+    view_control.set_lookat(center)       # 注视点设置为点云中心
+    view_control.set_zoom(0.7)            # 缩放比例（可调）
+
     vis.update_geometry(pcd)
     vis.poll_events()
     vis.update_renderer()
     vis.capture_screen_image(filename, do_render=True)
     vis.destroy_window()
-    print(f"Saved point cloud screenshot: {filename}")
+    print(f"Saved X-O-Z front view screenshot: {filename}")
 
 
-def non_blocking_show_point_cloud(pcd: o3d.geometry.PointCloud, window_name: str):
-    """Display point cloud in non-blocking mode using a separate thread."""
+def non_blocking_show_point_cloud(pcd: o3d.geometry.PointCloud, window_name: str = "PointCloud"):
+    """
+    Truly non-blocking display of a point cloud using Open3D's Visualizer in a background thread.
+    """
 
-    def show_pcd():
-        o3d.visualization.draw_geometries([pcd], window_name=window_name)
+    def visualize():
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(window_name=window_name)
+        vis.add_geometry(pcd)
+        vis.poll_events()
+        vis.update_renderer()
 
-    thread = threading.Thread(target=show_pcd)
-    thread.daemon = True  # Ensure thread exits when main program exits
+        # 控制持续显示时间（可配置），否则只会闪一下
+        for _ in range(300):  # 显示约3秒（假设帧率10fps）
+            vis.poll_events()
+            vis.update_renderer()
+            time.sleep(0.03)
+
+        vis.destroy_window()
+
+    thread = threading.Thread(target=visualize)
+    thread.daemon = True
     thread.start()
 
 

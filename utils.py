@@ -1,3 +1,5 @@
+import logging
+import os
 import time
 from _ctypes import sizeof
 import open3d as o3d
@@ -8,7 +10,7 @@ from collections import defaultdict
 from sklearn.cluster import KMeans
 from class_define import Box, Tasks
 from config import GRID_PARAMS
-
+from datetime import datetime
 # Point Cloud Processing
 def preprocess_point_cloud(points, colors, voxel_size=0.005, nb_neighbors=20, std_ratio=0.5, min_cluster_size=1000):
     pcd = o3d.geometry.PointCloud()
@@ -121,6 +123,10 @@ def transmit_to_plc(tasks):
             plc.write_by_name('Camera.aHeightEachRow', aHeightEachRow, pyads.PLCTYPE_ARR_INT(nTotalRow))
             plc.write_by_name('Camera.aLeftBoxArrayFlat', leftArm_Data, pyads.PLCTYPE_ARR_INT(nLeftBoxCount * 9))
             plc.write_by_name('Camera.aRightBoxArrayFlat', rightArm_Data, pyads.PLCTYPE_ARR_INT(nRightBoxCount * 9))
+            plc.write_by_name('Camera.bInspection_IPC_Done', True, pyads.PLCTYPE_BOOL)
+            print("Data successfully written to PLC")
+            logging.info("Data successfully written to PLC")
+            logging.info("Camera.bInspection_IPC_Done set to True")
 
             print("Data successfully written to PLC")
             break
@@ -141,22 +147,70 @@ def transmit_to_plc(tasks):
             except Exception as e:
                 print(f"Error closing PLC connection: {e}")
 
-# Visualization
 class Visualizer:
-    def __init__(self):
+    def __init__(self, images_dir="images"):
+        """
+        Initialize the Visualizer with default figure size and images directory.
+
+        Args:
+            images_dir (str): Directory to save images. Defaults to 'images'.
+        """
         self.figsize = (10, 8)
+        self.images_dir = images_dir
+        os.makedirs(self.images_dir, exist_ok=True)  # Create images directory if it doesn't exist
+        plt.ion()  # Enable interactive mode for non-blocking display
 
     def _set_equal_aspect(self, ax, points):
+        """
+        Set equal aspect ratio for 3D axes based on point cloud range.
+
+        Args:
+            ax: Matplotlib 3D axes object.
+            points (np.ndarray): 3D points of shape (N, 3).
+
+        Raises:
+            ValueError: If points is not a valid numpy array.
+        """
+        if not isinstance(points, np.ndarray) or points.shape[1] != 3:
+            raise ValueError("Points must be a numpy array of shape (N, 3)")
         ax.set_box_aspect([1, 1, 1])
         max_range = max(points[:, i].ptp() for i in range(3)) / 2
         mid = [points[:, i].mean() for i in range(3)]
         for i, lim in enumerate(['xlim', 'ylim', 'zlim']):
             getattr(ax, f'set_{lim}')(mid[i] - max_range, mid[i] + max_range)
 
+    def _get_timestamped_filename(self, prefix):
+        """
+        Generate a filename with a timestamp.
+
+        Args:
+            prefix (str): Prefix for the filename (e.g., 'visualize_points').
+
+        Returns:
+            str: Full path to the timestamped file (e.g., 'images/visualize_points_20250416_123456.png').
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.images_dir, f"{prefix}_{timestamp}.png")
+
     def visualize_points(self, points, high_len):
-        if not len(points):
+        """
+        Visualize 3D points, distinguishing high and low points, non-blocking, and save with timestamp.
+
+        Args:
+            points (np.ndarray): 3D points of shape (N, 3).
+            high_len (int): Number of points classified as 'high'.
+
+        Raises:
+            ValueError: If points is not a valid numpy array or high_len is invalid.
+        """
+        if not isinstance(points, np.ndarray) or points.shape[1] != 3:
+            raise ValueError("Points must be a numpy array of shape (N, 3)")
+        if not isinstance(high_len, int) or high_len < 0 or high_len > len(points):
+            raise ValueError("high_len must be a non-negative integer <= len(points)")
+        if len(points) == 0:
             print("Warning: No points to visualize")
             return
+
         fig = plt.figure(figsize=self.figsize)
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(points[:high_len, 0], points[:high_len, 1], points[:high_len, 2], c='r', label='High')
@@ -164,12 +218,38 @@ class Visualizer:
         self._set_equal_aspect(ax, points)
         ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='Detected 3D Points')
         ax.legend()
-        plt.show()
+
+        # Save the plot
+        save_path = self._get_timestamped_filename("visualize_points")
+        try:
+            plt.savefig(save_path, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+        except Exception as e:
+            print(f"Error saving plot to {save_path}: {e}")
+
+        # Non-blocking display
+        plt.draw()
+        plt.pause(0.001)  # Brief pause to update display
 
     def visualize_comparison(self, original, filtered):
+        """
+        Compare original and filtered 3D point clouds side by side, non-blocking, and save with timestamp.
+
+        Args:
+            original (np.ndarray): Original 3D points of shape (N, 3).
+            filtered (np.ndarray): Filtered 3D points of shape (M, 3).
+
+        Raises:
+            ValueError: If inputs are not valid numpy arrays.
+        """
+        if not isinstance(original, np.ndarray) or not isinstance(filtered, np.ndarray):
+            raise ValueError("Original and filtered points must be numpy arrays")
+        if original.shape[1] != 3 or filtered.shape[1] != 3:
+            raise ValueError("Points must have shape (N, 3)")
         if not (len(original) and len(filtered)):
             print("Warning: No points to visualize")
             return
+
         fig = plt.figure(figsize=(12, 6))
         for i, (data, title, color) in enumerate([(original, 'Original Points', 'gray'),
                                                   (filtered, 'Filtered Points', 'blue')]):
@@ -180,12 +260,43 @@ class Visualizer:
             ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)')
             ax.legend([title])
         plt.tight_layout()
-        plt.show()
+
+        # Save the plot
+        save_path = self._get_timestamped_filename("visualize_comparison")
+        try:
+            plt.savefig(save_path, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+        except Exception as e:
+            print(f"Error saving plot to {save_path}: {e}")
+
+        # Non-blocking display
+        plt.draw()
+        plt.pause(0.001)
 
     def plot_all_2d(self, points_2d, grid_points, adjusted_3d, x_labels, z_labels):
+        """
+        Plot 2D comparison of original, grid, and adjusted points, non-blocking, and save with timestamp.
+
+        Args:
+            points_2d (np.ndarray): 2D points of shape (N, 2).
+            grid_points (np.ndarray): Grid points of shape (M, 2).
+            adjusted_3d (np.ndarray): Adjusted 3D points of shape (K, 3).
+            x_labels (list): Labels for x-coordinates.
+            z_labels (list): Labels for z-coordinates.
+
+        Raises:
+            ValueError: If inputs are not valid or inconsistent.
+        """
+        if not all(isinstance(arr, np.ndarray) for arr in [points_2d, grid_points, adjusted_3d]):
+            raise ValueError("All point arrays must be numpy arrays")
+        if points_2d.shape[1] != 2 or grid_points.shape[1] != 2 or adjusted_3d.shape[1] != 3:
+            raise ValueError("Invalid point array shapes")
         if not (len(points_2d) and len(grid_points) and len(adjusted_3d)):
             print("Warning: No points to visualize")
             return
+        if len(x_labels) != len(points_2d) or len(z_labels) != len(points_2d):
+            raise ValueError("Label lengths must match points_2d length")
+
         plt.figure(figsize=(12, 9))
         plt.scatter(points_2d[:, 0], points_2d[:, 1], c='blue', s=30, edgecolors='k', label='Original')
         plt.scatter(grid_points[:, 0], grid_points[:, 1], c='black', marker='x', s=50, label='Grid')
@@ -203,12 +314,38 @@ class Visualizer:
         plt.title('Original vs Adjusted vs Grid Points (2D)')
         plt.legend()
         plt.grid(True)
-        plt.show()
+
+        # Save the plot
+        save_path = self._get_timestamped_filename("plot_all_2d")
+        try:
+            plt.savefig(save_path, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+        except Exception as e:
+            print(f"Error saving plot to {save_path}: {e}")
+
+        # Non-blocking display
+        plt.draw()
+        plt.pause(0.001)
 
     def plot_all_3d(self, original, adjusted):
+        """
+        Plot 3D comparison of original and adjusted points, non-blocking, and save with timestamp.
+
+        Args:
+            original (np.ndarray): Original 3D points of shape (N, 3).
+            adjusted (np.ndarray): Adjusted 3D points of shape (M, 3).
+
+        Raises:
+            ValueError: If inputs are not valid numpy arrays.
+        """
+        if not isinstance(original, np.ndarray) or not isinstance(adjusted, np.ndarray):
+            raise ValueError("Original and adjusted points must be numpy arrays")
+        if original.shape[1] != 3 or adjusted.shape[1] != 3:
+            raise ValueError("Points must have shape (N, 3)")
         if not (len(original) and len(adjusted)):
             print("Warning: No points to visualize")
             return
+
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(original[:, 0], original[:, 1], original[:, 2], c='blue', label='Original')
@@ -216,7 +353,18 @@ class Visualizer:
         self._set_equal_aspect(ax, np.vstack((original, adjusted)))
         ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='Original vs Adjusted 3D')
         ax.legend()
-        plt.show()
+
+        # Save the plot
+        save_path = self._get_timestamped_filename("plot_all_3d")
+        try:
+            plt.savefig(save_path, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+        except Exception as e:
+            print(f"Error saving plot to {save_path}: {e}")
+
+        # Non-blocking display
+        plt.draw()
+        plt.pause(0.001)
 
 # Box Utilities
 def merge_boxes_by_row_col(box_list):

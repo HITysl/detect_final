@@ -103,9 +103,11 @@ class CameraHandler:
                     handle, timestamp, value = self.plc.parse_notification(notification, data_type)
                     logging.info(f"Low position detection signal received: {value} at {timestamp}")
                     print(f"低位检测信号收到: {value} at {timestamp}")
-                    if value != last_low_start_flag_value:
+                    if value == True and last_low_start_flag_value == False:
                         low_pos_done_flag = True
-                        last_low_start_flag_value = value
+                        logging.info("Low position signal changed from False to True, triggering capture")
+                        print("低位信号从 False 变为 True，触发拍摄")
+                    last_low_start_flag_value = value
                 except pyads.ADSError as e:
                     logging.error(f"Low pos callback error: {e}")
 
@@ -116,9 +118,11 @@ class CameraHandler:
                     handle, timestamp, value = self.plc.parse_notification(notification, data_type)
                     logging.info(f"High position detection signal received: {value} at {timestamp}")
                     print(f"高位检测信号收到: {value} at {timestamp}")
-                    if value != last_high_start_flag_value:
+                    if value == True and last_high_start_flag_value == False:
                         high_pos_done_flag = True
-                        last_high_start_flag_value = value
+                        logging.info("High position signal changed from False to True, triggering capture")
+                        print("高位信号从 False 变为 True，触发拍摄")
+                    last_high_start_flag_value = value
                 except pyads.ADSError as e:
                     logging.error(f"High pos callback error: {e}")
 
