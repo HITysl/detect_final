@@ -25,8 +25,7 @@ GRID_PARAMS = {
     'row_count': None,
     'col_count': None
 }
-
-CLUSTER_PARAMS = {
-    'eps': 0.1,
-    'min_samples': 4
+YOLO_PARAMS = {
+    'conf': 0.7,
+    'iou': 0.3
 }

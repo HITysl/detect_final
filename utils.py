@@ -1,8 +1,9 @@
 import logging
 import os
 import time
-from _ctypes import sizeof
+import threading
 import open3d as o3d
+import cv2
 import numpy as np
 import pyads
 import matplotlib.pyplot as plt
@@ -11,6 +12,13 @@ from sklearn.cluster import KMeans
 from class_define import Box, Tasks
 from config import GRID_PARAMS
 from datetime import datetime
+
+logging.basicConfig(
+    filename='plc_camera_log.txt',
+    level=logging.INFO,
+    format='%(asctime)s: %(levelname)s: %(message)s'
+)
+
 # Point Cloud Processing
 def preprocess_point_cloud(points, colors, voxel_size=0.005, nb_neighbors=20, std_ratio=0.5, min_cluster_size=1000):
     pcd = o3d.geometry.PointCloud()
@@ -58,7 +66,27 @@ def transmit_to_plc(tasks):
             f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
         print(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
 
-    # ========== 原逻辑不变 ==========
+    logging.info("========== Task Summary ==========")
+    logging.info(str(tasks))  # 触发 Tasks.__str__()
+
+    logging.info("========== Left Boxes ==========")
+    for box in tasks.aLeftBoxArray:
+        logging.info(f"[Left] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        logging.info(
+            f"       Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+        logging.info(
+            f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+        logging.info(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+
+    logging.info("========== Right Boxes ==========")
+    for box in tasks.aRightBoxArray:
+        logging.info(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        logging.info(
+            f"        Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+        logging.info(
+            f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+        logging.info(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+
     nbox_l = int(GRID_PARAMS['x_spacing'] * 1000)
     nbox_w = int(GRID_PARAMS['y_spacing'] * 1000)
     nbox_h = int(GRID_PARAMS['z_spacing'] * 1000)
@@ -106,9 +134,6 @@ def transmit_to_plc(tasks):
     max_retry_time = 60
     retry_interval = 0
     start_time = time.time()
-
-
-
     while True:
         try:
             plc = pyads.Connection("192.168.1.20.1.1", 851)
@@ -127,8 +152,6 @@ def transmit_to_plc(tasks):
             print("Data successfully written to PLC")
             logging.info("Data successfully written to PLC")
             logging.info("Camera.bInspection_IPC_Done set to True")
-
-            print("Data successfully written to PLC")
             break
         except pyads.ADSError as e:
             elapsed_time = time.time() - start_time
@@ -148,28 +171,46 @@ def transmit_to_plc(tasks):
                 print(f"Error closing PLC connection: {e}")
 
 class Visualizer:
-    def __init__(self, images_dir="images"):
+    def __init__(self, images_dir="images", display_duration=5.0, enable_display=True):
         """
-        Initialize the Visualizer with default figure size and images directory.
+        初始化 Visualizer，设置默认图形大小、图像保存目录、显示时长和显示标志位。
 
-        Args:
-            images_dir (str): Directory to save images. Defaults to 'images'.
+        参数：
+            images_dir (str)：保存图像的目录，默认为 'images'。
+            display_duration (float)：非阻塞显示的持续时间（秒）。
+            enable_display (bool)：是否启用可视化显示，默认为 True。
         """
         self.figsize = (10, 8)
         self.images_dir = images_dir
-        os.makedirs(self.images_dir, exist_ok=True)  # Create images directory if it doesn't exist
-        plt.ion()  # Enable interactive mode for non-blocking display
+        self.display_duration = display_duration
+        self.enable_display = enable_display
+        os.makedirs(self.images_dir, exist_ok=True)
+        if self.enable_display:
+            plt.ion()  # 仅在启用显示时开启 Matplotlib 交互模式
+
+    def _get_timestamped_filename(self, prefix):
+        """
+        生成带时间戳的文件名。
+
+        参数：
+            prefix (str)：文件名前缀（例如 'visualize_points'）。
+
+        返回：
+            str：带时间戳的完整文件路径（例如 'images/visualize_points_20250416_123456.png'）。
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.images_dir, f"{prefix}_{timestamp}.png")
 
     def _set_equal_aspect(self, ax, points):
         """
-        Set equal aspect ratio for 3D axes based on point cloud range.
+        为 3D 轴设置等比例显示，根据点云范围调整。
 
-        Args:
-            ax: Matplotlib 3D axes object.
-            points (np.ndarray): 3D points of shape (N, 3).
+        参数：
+            ax：Matplotlib 3D 轴对象。
+            points (np.ndarray)：形状为 (N, 3) 的 3D 点。
 
-        Raises:
-            ValueError: If points is not a valid numpy array.
+        抛出：
+            ValueError：如果 points 不是有效的 numpy 数组。
         """
         if not isinstance(points, np.ndarray) or points.shape[1] != 3:
             raise ValueError("Points must be a numpy array of shape (N, 3)")
@@ -179,36 +220,123 @@ class Visualizer:
         for i, lim in enumerate(['xlim', 'ylim', 'zlim']):
             getattr(ax, f'set_{lim}')(mid[i] - max_range, mid[i] + max_range)
 
-    def _get_timestamped_filename(self, prefix):
+    def save_image(self, image: np.ndarray, img_type: str):
         """
-        Generate a filename with a timestamp.
+        保存带时间戳的图像。
 
-        Args:
-            prefix (str): Prefix for the filename (e.g., 'visualize_points').
-
-        Returns:
-            str: Full path to the timestamped file (e.g., 'images/visualize_points_20250416_123456.png').
+        参数：
+            image：图像（NumPy 数组）。
+            img_type：图像类型，用于文件名前缀。
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return os.path.join(self.images_dir, f"{prefix}_{timestamp}.png")
+        filename = self._get_timestamped_filename(img_type)
+        try:
+            cv2.imwrite(filename, image)
+            print(f"保存图像：{filename}")
+        except Exception as e:
+            print(f"保存图像到 {filename} 时出错：{e}")
+
+    def save_point_cloud_screenshot(self, pcd: o3d.geometry.PointCloud, pcd_type: str):
+        """
+        保存点云从 X-O-Z 平面（沿 -Y 方向的前视图）的截图。
+
+        参数：
+            pcd：Open3D PointCloud 对象。
+            pcd_type：点云类型，用于文件名前缀。
+        """
+        filename = self._get_timestamped_filename(pcd_type)
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(window_name=pcd_type, visible=False)
+        vis.add_geometry(pcd)
+
+        # 计算点云中心作为注视点
+        points = np.asarray(pcd.points)
+        center = np.mean(points, axis=0) if points.size else [0, 0, 0]
+
+        # 设置相机从 Y 负方向看过去，Z 朝上（即 X-O-Z 平面）
+        view_control = vis.get_view_control()
+        view_control.set_front([0, -1, 0])
+        view_control.set_up([0, 0, 1])
+        view_control.set_lookat(center)
+        view_control.set_zoom(0.7)
+
+        vis.update_geometry(pcd)
+        vis.poll_events()
+        vis.update_renderer()
+        try:
+            vis.capture_screen_image(filename, do_render=True)
+            print(f"保存 X-O-Z 前视图截图：{filename}")
+        except Exception as e:
+            print(f"保存点云截图到 {filename} 时出错：{e}")
+        finally:
+            vis.destroy_window()
+
+    def display_point_cloud_non_blocking(self, pcd: o3d.geometry.PointCloud, window_name: str = "PointCloud"):
+        """
+        使用后台线程以非阻塞方式显示点云，仅当 enable_display 为 True 时执行。
+
+        参数：
+            pcd：Open3D PointCloud 对象。
+            window_name：显示窗口的名称。
+        """
+        if not self.enable_display:
+            return
+
+        def visualize():
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(window_name=window_name)
+            vis.add_geometry(pcd)
+            vis.poll_events()
+            vis.update_renderer()
+            start_time = time.time()
+            while time.time() - start_time < self.display_duration:
+                vis.poll_events()
+                vis.update_renderer()
+                time.sleep(0.03)
+            vis.destroy_window()
+
+        thread = threading.Thread(target=visualize)
+        thread.daemon = True
+        thread.start()
+
+    def display_image_non_blocking(self, image: np.ndarray, window_name: str):
+        """
+        以非阻塞方式显示图像并保存，仅当 enable_display 为 True 时显示。
+
+        参数：
+            image：图像（NumPy 数组）。
+            window_name：显示窗口的名称。
+        """
+        self.save_image(image, window_name.lower().replace(" ", "_"))
+        # if not self.enable_display:
+        #     return
+
+        def show_image():
+            cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+            cv2.imshow(window_name, image)
+            cv2.waitKey(int(self.display_duration * 1000))
+            cv2.destroyAllWindows()
+
+        thread = threading.Thread(target=show_image)
+        thread.daemon = True
+        thread.start()
 
     def visualize_points(self, points, high_len):
         """
-        Visualize 3D points, distinguishing high and low points, non-blocking, and save with timestamp.
+        可视化 3D 点，区分高低点，非阻塞显示并保存带时间戳的图像，仅当 enable_display 为 True 时显示。
 
-        Args:
-            points (np.ndarray): 3D points of shape (N, 3).
-            high_len (int): Number of points classified as 'high'.
+        参数：
+            points (np.ndarray)：形状为 (N, 3) 的 3D 点。
+            high_len (int)：分类为“高”的点数量。
 
-        Raises:
-            ValueError: If points is not a valid numpy array or high_len is invalid.
+        抛出：
+            ValueError：如果 points 不是有效的 numpy 数组或 high_len 无效。
         """
         if not isinstance(points, np.ndarray) or points.shape[1] != 3:
             raise ValueError("Points must be a numpy array of shape (N, 3)")
         if not isinstance(high_len, int) or high_len < 0 or high_len > len(points):
             raise ValueError("high_len must be a non-negative integer <= len(points)")
         if len(points) == 0:
-            print("Warning: No points to visualize")
+            print("警告：没有点可可视化")
             return
 
         fig = plt.figure(figsize=self.figsize)
@@ -219,35 +347,37 @@ class Visualizer:
         ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='Detected 3D Points')
         ax.legend()
 
-        # Save the plot
+        # 保存绘图
         save_path = self._get_timestamped_filename("visualize_points")
         try:
             plt.savefig(save_path, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+            print(f"绘图保存到 {save_path}")
         except Exception as e:
-            print(f"Error saving plot to {save_path}: {e}")
+            print(f"保存绘图到 {save_path} 时出错：{e}")
 
-        # Non-blocking display
-        plt.draw()
-        plt.pause(0.001)  # Brief pause to update display
+        # 非阻塞显示，仅当 enable_display 为 True 时执行
+        if self.enable_display:
+            plt.draw()
+            plt.pause(self.display_duration)
+        plt.close(fig)
 
     def visualize_comparison(self, original, filtered):
         """
-        Compare original and filtered 3D point clouds side by side, non-blocking, and save with timestamp.
+        比较原始和过滤后的 3D 点云，显示并保存带时间戳的图像，仅当 enable_display 为 True 时显示。
 
-        Args:
-            original (np.ndarray): Original 3D points of shape (N, 3).
-            filtered (np.ndarray): Filtered 3D points of shape (M, 3).
+        参数：
+            original (np.ndarray)：原始 3D 点，形状为 (N, 3)。
+            filtered (np.ndarray)：过滤后的 3D 点，形状为 (M, 3)。
 
-        Raises:
-            ValueError: If inputs are not valid numpy arrays.
+        抛出：
+            ValueError：如果输入不是有效的 numpy 数组。
         """
         if not isinstance(original, np.ndarray) or not isinstance(filtered, np.ndarray):
             raise ValueError("Original and filtered points must be numpy arrays")
         if original.shape[1] != 3 or filtered.shape[1] != 3:
             raise ValueError("Points must have shape (N, 3)")
         if not (len(original) and len(filtered)):
-            print("Warning: No points to visualize")
+            print("警告：没有点可可视化")
             return
 
         fig = plt.figure(figsize=(12, 6))
@@ -261,38 +391,40 @@ class Visualizer:
             ax.legend([title])
         plt.tight_layout()
 
-        # Save the plot
+        # 保存绘图
         save_path = self._get_timestamped_filename("visualize_comparison")
         try:
             plt.savefig(save_path, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+            print(f"绘图保存到 {save_path}")
         except Exception as e:
-            print(f"Error saving plot to {save_path}: {e}")
+            print(f"保存绘图到 {save_path} 时出错：{e}")
 
-        # Non-blocking display
-        plt.draw()
-        plt.pause(0.001)
+        # 非阻塞显示，仅当 enable_display 为 True 时执行
+        if self.enable_display:
+            plt.draw()
+            plt.pause(self.display_duration)
+        plt.close(fig)
 
     def plot_all_2d(self, points_2d, grid_points, adjusted_3d, x_labels, z_labels):
         """
-        Plot 2D comparison of original, grid, and adjusted points, non-blocking, and save with timestamp.
+        绘制原始、网格和调整后的点的 2D 比较图，非阻塞显示并保存带时间戳的图像，仅当 enable_display 为 True 时显示。
 
-        Args:
-            points_2d (np.ndarray): 2D points of shape (N, 2).
-            grid_points (np.ndarray): Grid points of shape (M, 2).
-            adjusted_3d (np.ndarray): Adjusted 3D points of shape (K, 3).
-            x_labels (list): Labels for x-coordinates.
-            z_labels (list): Labels for z-coordinates.
+        参数：
+            points_2d (np.ndarray)：形状为 (N, 2) 的 2D 点。
+            grid_points (np.ndarray)：形状为 (M, 2) 的网格点。
+            adjusted_3d (np.ndarray)：调整后的 3D 点，形状为 (K, 3)。
+            x_labels (list)：X 坐标标签。
+            z_labels (list)：Z 坐标标签。
 
-        Raises:
-            ValueError: If inputs are not valid or inconsistent.
+        抛出：
+            ValueError：如果输入无效或不一致。
         """
         if not all(isinstance(arr, np.ndarray) for arr in [points_2d, grid_points, adjusted_3d]):
             raise ValueError("All point arrays must be numpy arrays")
         if points_2d.shape[1] != 2 or grid_points.shape[1] != 2 or adjusted_3d.shape[1] != 3:
             raise ValueError("Invalid point array shapes")
         if not (len(points_2d) and len(grid_points) and len(adjusted_3d)):
-            print("Warning: No points to visualize")
+            print("警告：没有点可可视化")
             return
         if len(x_labels) != len(points_2d) or len(z_labels) != len(points_2d):
             raise ValueError("Label lengths must match points_2d length")
@@ -315,35 +447,37 @@ class Visualizer:
         plt.legend()
         plt.grid(True)
 
-        # Save the plot
+        # 保存绘图
         save_path = self._get_timestamped_filename("plot_all_2d")
         try:
             plt.savefig(save_path, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+            print(f"绘图保存到 {save_path}")
         except Exception as e:
-            print(f"Error saving plot to {save_path}: {e}")
+            print(f"保存绘图到 {save_path} 时出错：{e}")
 
-        # Non-blocking display
-        plt.draw()
-        plt.pause(0.001)
+        # 非阻塞显示，仅当 enable_display 为 True 时执行
+        if self.enable_display:
+            plt.draw()
+            plt.pause(self.display_duration)
+        plt.close()
 
     def plot_all_3d(self, original, adjusted):
         """
-        Plot 3D comparison of original and adjusted points, non-blocking, and save with timestamp.
+        绘制原始和调整后的点的 3D 比较图，非阻塞显示并保存带时间戳的图像，仅当 enable_display 为 True 时显示。
 
-        Args:
-            original (np.ndarray): Original 3D points of shape (N, 3).
-            adjusted (np.ndarray): Adjusted 3D points of shape (M, 3).
+        参数：
+            original (np.ndarray)：原始 3D 点，形状为 (N, 3)。
+            adjusted (np.ndarray)：调整后的 3D 点，形状为 (M, 3)。
 
-        Raises:
-            ValueError: If inputs are not valid numpy arrays.
+        抛出：
+            ValueError：如果输入不是有效的 numpy 数组。
         """
         if not isinstance(original, np.ndarray) or not isinstance(adjusted, np.ndarray):
             raise ValueError("Original and adjusted points must be numpy arrays")
         if original.shape[1] != 3 or adjusted.shape[1] != 3:
             raise ValueError("Points must have shape (N, 3)")
         if not (len(original) and len(adjusted)):
-            print("Warning: No points to visualize")
+            print("警告：没有点可可视化")
             return
 
         fig = plt.figure(figsize=(12, 9))
@@ -354,17 +488,19 @@ class Visualizer:
         ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='Original vs Adjusted 3D')
         ax.legend()
 
-        # Save the plot
+        # 保存绘图
         save_path = self._get_timestamped_filename("plot_all_3d")
         try:
             plt.savefig(save_path, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+            print(f"绘图保存到 {save_path}")
         except Exception as e:
-            print(f"Error saving plot to {save_path}: {e}")
+            print(f"保存绘图到 {save_path} 时出错：{e}")
 
-        # Non-blocking display
-        plt.draw()
-        plt.pause(0.001)
+        # 非阻塞显示，仅当 enable_display 为 True 时执行
+        if self.enable_display:
+            plt.draw()
+            plt.pause(self.display_duration)
+        plt.close(fig)
 
 # Box Utilities
 def merge_boxes_by_row_col(box_list):
@@ -386,7 +522,7 @@ def merge_boxes_by_row_col(box_list):
 def assign_box_sides(boxes):
     if len(boxes) >= 2:
         x_coords = np.array([box.aGraspPoint_Side[0] for box in boxes]).reshape(-1, 1)
-        kmeans = KMeans(n_clusters=2, random_state=0).fit(x_coords)
+        kmeans = KMeans(n_clusters=2, random_state=0, n_init='auto').fit(x_coords)
         labels = kmeans.labels_
         cluster_centers = kmeans.cluster_centers_
         left_cluster = 0 if cluster_centers[0] < cluster_centers[1] else 1

@@ -3,7 +3,7 @@ import numpy as np
 import cupy as cp
 from ultralytics import YOLO
 from scipy.spatial import KDTree
-from config import CAMERA_PARAMS, TRANSFORMATIONS
+from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS
 
 class PointDetector:
     def __init__(self, model_path):
@@ -26,6 +26,7 @@ class PointDetector:
         if color_img is None or depth_img is None:
             raise ValueError(f"Failed to load images: {rgb_path} or {depth_path}")
         depth_img[(depth_img > 2000) | (depth_img < 1000)] = 0
+        #depth_img[(depth_img > 3000) | (depth_img < 1000)] = 0
         depth_img = depth_img.astype(np.float32)
         depth_img_norm = cv2.normalize(depth_img, None, 0, 255, cv2.NORM_MINMAX)
         depth_img_undist = cv2.medianBlur(depth_img_norm, 5)
@@ -111,7 +112,7 @@ class PointDetector:
         sharpened = np.uint8(np.clip(smoothed - 0.7 * laplacian, 0, 255))
         proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
 
-        results = self.model(proj_img, conf=0.5, iou=0.3)
+        results = self.model(proj_img, conf=YOLO_PARAMS['conf'], iou=YOLO_PARAMS['iou'])
         detected_boxes_info = []
         display_img = proj_img.copy()
         xz_points = points[:, [0, 2]]

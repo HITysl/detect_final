@@ -1,5 +1,5 @@
 from camera_handler import CameraHandler
-from class_define import Box
+from class_define import Box, Tasks
 from point_detector import PointDetector
 from point_processor import PointProcessor
 from point_adjuster import PointAdjuster
@@ -8,62 +8,23 @@ from detection_pipeline import process_detections
 import cv2
 import logging
 
-# manual_box_list = [
-#     Box(
-#         id=1,
-#         row=1,
-#         col=1,
-#         side='left',
-#         coords_3d=[-434.8, 1095.9, 150],
-#         width_3d=401.2,
-#         height_3d=196.3
-#     ),
-#     Box(
-#         id=2,
-#         row=1,
-#         col=2,
-#         side='left',
-#         coords_3d=[-28.2, 1102.5, 150],
-#         width_3d=419.9,
-#         height_3d=203.5
-#     ),
-#     Box(
-#         id=3,
-#         row=1,
-#         col=3,
-#         side='left',
-#         coords_3d=[377.3, 1099.9, 150],
-#         width_3d=418.4,
-#         height_3d=223.5
-#     ),
-#     Box(
-#         id=4,
-#         row=1,
-#         col=4,
-#         side='right',
-#         coords_3d=[-415.5, 1100.6, 150],
-#         width_3d=412.7,
-#         height_3d=229.3
-#     ),
-#     Box(
-#         id=5,
-#         row=1,
-#         col=5,
-#         side='right',
-#         coords_3d=[-8.3, 1084.1, 150],
-#         width_3d=415.6,
-#         height_3d=239.3
-#     ),
-#     Box(
-#         id=6,
-#         row=1,
-#         col=6,
-#         side='right',
-#         coords_3d=[395.0, 1077.0, 150],
-#         width_3d=402.7,
-#         height_3d=266.5
-#     )
-# ]
+manual_box_list = [
+    # 上一层 row = 1
+    Box(id=1, row=1, col=1, side='left',  coords_3d=[-379.9, 1100, 454.5], width_3d=387.2, height_3d=317.9),
+    Box(id=2, row=1, col=4, side='right', coords_3d=[-372.2, 1100, 458.1], width_3d=413.5, height_3d=315.5),
+    Box(id=3, row=1, col=2, side='left',  coords_3d=[23.7,   1100, 455.7], width_3d=423.1, height_3d=320.3),
+    Box(id=4, row=1, col=5, side='right', coords_3d=[36.8,   1100, 459.4], width_3d=413.5, height_3d=317.9),
+    Box(id=5, row=1, col=3, side='left',  coords_3d=[426.0,  1100, 456.9], width_3d=411.1, height_3d=320.3),
+    Box(id=6, row=1, col=6, side='right', coords_3d=[441.6,  1100, 460.6], width_3d=406.3, height_3d=322.7),
+
+    # 下一层 row = 2，z - 300
+    Box(id=7,  row=2, col=1, side='left',  coords_3d=[-379.9, 1100, 154.5], width_3d=387.2, height_3d=317.9),
+    Box(id=8,  row=2, col=4, side='right', coords_3d=[-372.2, 1100, 158.1], width_3d=413.5, height_3d=315.5),
+    Box(id=9,  row=2, col=2, side='left',  coords_3d=[23.7,   1100, 155.7], width_3d=423.1, height_3d=320.3),
+    Box(id=10, row=2, col=5, side='right', coords_3d=[36.8,   1100, 159.4], width_3d=413.5, height_3d=317.9),
+    Box(id=11, row=2, col=3, side='left',  coords_3d=[426.0,  1100, 156.9], width_3d=411.1, height_3d=320.3),
+    Box(id=12, row=2, col=6, side='right', coords_3d=[441.6,  1100, 160.6], width_3d=406.3, height_3d=322.7)
+]
 
 
 
@@ -81,7 +42,7 @@ def main():
         detector = PointDetector("E:\\Desktop\\car\\yolo11best.pt")
         processor = PointProcessor()
         adjuster = PointAdjuster()
-        visualizer = Visualizer()
+        visualizer = Visualizer(enable_display=False)
 
         if not camera.configure_camera() or not camera.start_plc():
             logging.critical("Failed to configure camera or PLC, exiting")
@@ -99,6 +60,7 @@ def main():
 
                 # 处理检测和任务
                 tasks = process_detections(detector, processor, adjuster, visualizer, color_low, depth_low, color_high, depth_high)
+                #tasks = Tasks(manual_box_list, total_rows=2, total_cols=6)
                 transmit_to_plc(tasks)
                 logging.info("Detection and task transmission completed")
 

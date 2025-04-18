@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import logging
 import sys
+ENTER_KEY = 13
 
 # 配置日志
 logging.basicConfig(
@@ -183,18 +184,19 @@ class CameraHandler:
         WARNING_CHECK_INTERVAL = 60  # 每60秒检查一次是否需要提示警告
 
         while True:
-            color_image, depth_image, depth_data = self.get_frames()
-            if color_image is None or depth_image is None:
+            color_image_low, depth_image_low, depth_data_low = self.get_frames()
+            if color_image_low is None or depth_image_low is None:
                 continue
             DISPLAY_WIDTH = 1280
             DISPLAY_HEIGHT = 800
 
-            resized_color_image = cv2.resize(color_image, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+            resized_color_image = cv2.resize(color_image_low, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
             cv2.imshow("Low Preview", resized_color_image)
             key = cv2.waitKey(1)
 
             # 检查低位信号
-            if low_pos_done_flag:
+            if low_pos_done_flag or key == ENTER_KEY:
+                time.sleep(1)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"Low_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"Low_depth_{timestamp}.png")
@@ -202,8 +204,8 @@ class CameraHandler:
                 print(f"低位拍摄完成，保存为 {color_filename} 和 {depth_filename}")
                 logging.info(f"Low position capture completed, saved as {color_filename} and {depth_filename}")
                 cv2.destroyWindow("Low Preview")
-                cv2.imwrite(color_filename, color_image)
-                cv2.imwrite(depth_filename, depth_data)
+                cv2.imwrite(color_filename, color_image_low)
+                cv2.imwrite(depth_filename, depth_data_low)
 
                 # 向 PLC 写入低位完成信号
                 try:
@@ -213,8 +215,6 @@ class CameraHandler:
                 except pyads.ADSError as e:
                     logging.error(f"Failed to write low pos done: {e}")
 
-                color_low = color_image
-                depth_low = depth_data
                 break
 
             # 每60秒记录警告并打印提示
@@ -238,15 +238,16 @@ class CameraHandler:
         last_warning_time = start_time
 
         while True:
-            color_image, depth_image, depth_data = self.get_frames()
-            if color_image is None or depth_image is None:
+            color_image_high, depth_image_high, depth_data_high = self.get_frames()
+            if color_image_high is None or depth_image_high is None:
                 continue
-            resized_color_image = cv2.resize(color_image, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+            resized_color_image = cv2.resize(color_image_high, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
             cv2.imshow("High Preview", resized_color_image)
             key = cv2.waitKey(1)
 
             # 检查高位信号
-            if high_pos_done_flag:
+            if high_pos_done_flag or key == ENTER_KEY:
+                time.sleep(1)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"High_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"High_depth_{timestamp}.png")
@@ -254,8 +255,8 @@ class CameraHandler:
                 print(f"高位拍摄完成，保存为 {color_filename} 和 {depth_filename}")
                 logging.info(f"High position capture completed, saved as {color_filename} and {depth_filename}")
                 cv2.destroyWindow("High Preview")
-                cv2.imwrite(color_filename, color_image)
-                cv2.imwrite(depth_filename, depth_data)
+                cv2.imwrite(color_filename, color_image_high)
+                cv2.imwrite(depth_filename, depth_data_high)
 
                 # 向 PLC 写入高位完成信号
                 try:
@@ -265,7 +266,9 @@ class CameraHandler:
                 except pyads.ADSError as e:
                     logging.error(f"Failed to write high pos done: {e}")
 
-                return color_low, depth_low, color_image, depth_data
+                return color_image_low, depth_data_low, color_image_high, depth_data_high
+                #return color_image_low, depth_data_low, color_image_low, depth_data_low  #专门为4行调试
+
 
             # 每60秒记录警告并打印提示
             current_time = time.time()

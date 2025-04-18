@@ -28,6 +28,7 @@ class Tasks:
     def __init__(self, boxes, total_rows, total_cols):
         self.nTotalRow = total_rows
         self.nTotalCol = total_cols
+        self.flag = True
 
         # 检查每行箱子数量是否为6
         row_counts = defaultdict(int)
@@ -35,15 +36,15 @@ class Tasks:
             row_counts[box.row] += 1
         for row in range(1, total_rows + 1):
             if row_counts[row] != 6:
-                raise ValueError(f"Row {row} has {row_counts[row]} boxes, expected 6")
+                self.flag = False
 
-        # 分割 左右箱子 并按中间-右-左顺序排列
         self.aLeftBoxArray = self._reorder_boxes(
-            [box for box in boxes if box.side == 'left']
-        )
+                [box for box in boxes if box.side == 'left']
+            )
         self.aRightBoxArray = self._reorder_boxes(
-            [box for box in boxes if box.side == 'right']
-        )
+                [box for box in boxes if box.side == 'right']
+            )
+
         self.nLeftBoxCount = len(self.aLeftBoxArray)
         self.nRightBoxCount = len(self.aRightBoxArray)
         self.aHeightEachRow = self._compute_row_avg_heights(boxes)

@@ -1,6 +1,11 @@
 import numpy as np
 from sklearn.cluster import DBSCAN
-from config import CLUSTER_PARAMS, GRID_PARAMS
+from config import  GRID_PARAMS
+
+CLUSTER_PARAMS = {
+    'eps': 0.1,
+    'min_samples': 4
+}
 
 class PointProcessor:
     def __init__(self):
@@ -8,14 +13,12 @@ class PointProcessor:
         self.min_samples = CLUSTER_PARAMS['min_samples']
 
     def cluster_and_filter(self, points):
-        clustering = DBSCAN(eps=0.15, min_samples=2).fit(points)
+        clustering = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit(points)
         labels = clustering.labels_
-        centers = [points[labels == label].mean(axis=0) if label != -1 else points[labels == label]
-                   for label in set(labels)]
-        centers = np.vstack([c if c.ndim > 1 else c.reshape(1, -1) for c in centers])
+        centers = [points[labels == label].mean(axis=0) for label in set(labels) if label != -1]
         if len(centers) == 0:
             raise ValueError("No cluster centers found")
-        return centers
+        return np.array(centers)
 
     def cluster_points(self, points_2d):
         clustering_x = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit(points_2d[:, [0]])
