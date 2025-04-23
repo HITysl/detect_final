@@ -266,8 +266,8 @@ class CameraHandler:
                 except pyads.ADSError as e:
                     logging.error(f"Failed to write high pos done: {e}")
 
-                return color_image_low, depth_data_low, color_image_high, depth_data_high
-                #return color_image_low, depth_data_low, color_image_low, depth_data_low  #专门为4行调试
+                #return color_image_low, depth_data_low, color_image_high, depth_data_high
+                return color_image_low, depth_data_low, color_image_low, depth_data_low  #专门调试
 
 
             # 每60秒记录警告并打印提示

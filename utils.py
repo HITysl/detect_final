@@ -2,6 +2,8 @@ import logging
 import os
 import time
 import threading
+from dataclasses import dataclass
+from typing import Tuple
 import open3d as o3d
 import cv2
 import numpy as np
@@ -12,6 +14,13 @@ from sklearn.cluster import KMeans
 from class_define import Box, Tasks
 from config import GRID_PARAMS
 from datetime import datetime
+
+@dataclass
+class FilterConfig:
+    bin_width: float = 0.01
+    y_range: float = 0.25
+    outlier_nb_neighbors: int = 80
+    outlier_std_ratio: float = 2.0
 
 logging.basicConfig(
     filename='plc_camera_log.txt',
@@ -307,8 +316,8 @@ class Visualizer:
             window_name：显示窗口的名称。
         """
         self.save_image(image, window_name.lower().replace(" ", "_"))
-        # if not self.enable_display:
-        #     return
+        if not self.enable_display:
+            return
 
         def show_image():
             cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
@@ -573,3 +582,59 @@ def create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices
                         print(
                             f"Updated Box id={box.id}, row={box.row}, col={box.col}, Top z={box.aGraspPoint_Top[2]}, Above z={above_box.aGraspPoint_Side[2]}")
     return boxes
+
+
+def filter_by_y_density_and_visualize(
+        points: np.ndarray,
+        colors: np.ndarray,
+        visualizer: Visualizer,
+        config: FilterConfig = FilterConfig()
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    根据 Y 值密度峰值过滤点云，并使用统计过滤去除离群点。
+    保存并以非阻塞方式可视化保留的点云（使用原始颜色）。
+
+    参数：
+        points：3D 点云 (N, 3)。
+        colors：对应的颜色 (N, 3)。
+        visualizer：Visualizer 实例，用于显示和保存。
+        config：过滤参数配置。
+
+    返回：
+        过滤后的点和颜色（NumPy 数组）。
+    """
+    y_vals = points[:, 1]
+
+    # 构建 Y 值直方图
+    hist, bin_edges = np.histogram(y_vals, bins=np.arange(y_vals.min(), y_vals.max(), config.bin_width))
+    max_bin_idx = np.argmax(hist)
+
+    # 找到主峰中心并设置保留范围
+    y_center = (bin_edges[max_bin_idx] + bin_edges[max_bin_idx + 1]) / 2
+    y_min, y_max = y_center - config.y_range / 2, y_center + config.y_range / 2
+
+    print(f"保留 Y 值在 [{y_min:.4f}, {y_max:.4f}] 内的点")
+
+    # 初始 Y 范围过滤
+    mask = (y_vals >= y_min) & (y_vals <= y_max)
+    filtered_points = points[mask]
+    filtered_colors = colors[mask]
+
+    # 创建临时点云用于过滤
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(filtered_points)
+    pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
+
+    # 统计离群点移除
+    pcd_clean, ind = pcd.remove_statistical_outlier(
+        nb_neighbors=config.outlier_nb_neighbors,
+        std_ratio=config.outlier_std_ratio
+    )
+
+    print(f"统计过滤后的点数：{len(ind)} / 初始点数：{len(filtered_points)}")
+
+    # 保存点云截图并以非阻塞方式显示
+    visualizer.save_point_cloud_screenshot(pcd_clean, "y_peak_filtered_point_cloud")
+    visualizer.display_point_cloud_non_blocking(pcd_clean, "Y Peak + Statistically Filtered Point Cloud (Original Colors)")
+
+    return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)

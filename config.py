@@ -26,6 +26,6 @@ GRID_PARAMS = {
     'col_count': None
 }
 YOLO_PARAMS = {
-    'conf': 0.7,
+    'conf': 0.5,
     'iou': 0.3
 }

@@ -25,8 +25,8 @@ class PointDetector:
             depth_img = depth_path
         if color_img is None or depth_img is None:
             raise ValueError(f"Failed to load images: {rgb_path} or {depth_path}")
-        depth_img[(depth_img > 2000) | (depth_img < 1000)] = 0
-        #depth_img[(depth_img > 3000) | (depth_img < 1000)] = 0
+        #depth_img[(depth_img > 2000) | (depth_img < 1000)] = 0
+        #depth_img[(depth_img > 2500) | (depth_img < 1000)] = 0
         depth_img = depth_img.astype(np.float32)
         depth_img_norm = cv2.normalize(depth_img, None, 0, 255, cv2.NORM_MINMAX)
         depth_img_undist = cv2.medianBlur(depth_img_norm, 5)
@@ -103,13 +103,14 @@ class PointDetector:
                     depth_buffer[i, j] = Y
 
         kernel = np.ones((3, 3), np.uint8)
-        img_opened = cv2.morphologyEx(proj_img, cv2.MORPH_OPEN, kernel, iterations=2)
-        img_opened = cv2.medianBlur(img_opened, 5)
+        img_opened = cv2.morphologyEx(proj_img, cv2.MORPH_OPEN, kernel, iterations=1)
+        img_opened = cv2.medianBlur(img_opened, 3)
         gray = cv2.cvtColor(img_opened, cv2.COLOR_BGR2GRAY)
 
         smoothed = cv2.bilateralFilter(gray, d=5, sigmaColor=75, sigmaSpace=25)
         laplacian = cv2.Laplacian(smoothed, cv2.CV_64F, ksize=3)
-        sharpened = np.uint8(np.clip(smoothed - 0.7 * laplacian, 0, 255))
+        sharpened = np.uint8(np.clip(smoothed - 1 * laplacian, 0, 255))
+
         proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
 
         results = self.model(proj_img, conf=YOLO_PARAMS['conf'], iou=YOLO_PARAMS['iou'])
@@ -127,6 +128,8 @@ class PointDetector:
             for box_xywhn, box_xyxyn in zip(xywhn, xyxyn):
                 cx_pixel = int(box_xywhn[0] * W)
                 cy_pixel = int(box_xywhn[1] * H)
+                if cy_pixel < 400 :
+                    continue
                 w_pixel = int(box_xywhn[2] * W)
                 h_pixel = int(box_xywhn[3] * H)
                 x1 = cx_pixel - w_pixel // 2
@@ -147,6 +150,7 @@ class PointDetector:
                 x1_norm, y1_norm, x2_norm, y2_norm = box_xyxyn
                 x1_pixel, y1_pixel = int(x1_norm * W), int(y1_norm * H)
                 x2_pixel, y2_pixel = int(x2_norm * W), int(y2_norm * H)
+
                 X1_3d = (x1_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z1_3d = proj_params["z_max"] - (y1_pixel - proj_params["z_offset"]) / proj_params["scale"]
                 X2_3d = (x2_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
