@@ -196,7 +196,7 @@ class CameraHandler:
 
             # 检查低位信号
             if low_pos_done_flag or key == ENTER_KEY:
-                time.sleep(1)
+                time.sleep(5)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"Low_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"Low_depth_{timestamp}.png")
@@ -247,7 +247,7 @@ class CameraHandler:
 
             # 检查高位信号
             if high_pos_done_flag or key == ENTER_KEY:
-                time.sleep(1)
+                time.sleep(5)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"High_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"High_depth_{timestamp}.png")

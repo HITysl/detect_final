@@ -11376,3 +11376,454 @@
 2025-04-23 16:06:54,528: INFO: Camera.bInspection_IPC_Done set to True
 2025-04-23 16:06:54,530: INFO: Detection and task transmission completed
 2025-04-23 16:06:54,530: INFO: Starting low position detection
+2025-04-24 09:41:26,027: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:41:26,061: INFO: PLC connected
+2025-04-24 09:41:31,062: ERROR: Failed to start PLC on attempt 1: ADSError: timeout elapsed (1861). 
+2025-04-24 09:41:36,062: INFO: PLC connected
+2025-04-24 09:41:38,182: INFO: Low position detection signal received: False at 2025-04-24 01:56:16.922000
+2025-04-24 09:41:38,197: INFO: try_start_plc succeeded on attempt 2
+2025-04-24 09:41:38,197: INFO: Starting low position detection
+2025-04-24 09:41:38,200: INFO: High position detection signal received: False at 2025-04-24 01:56:16.942000
+2025-04-24 09:42:38,252: WARNING: Still waiting for low position signal after 60 seconds
+2025-04-24 09:43:38,446: WARNING: Still waiting for low position signal after 120 seconds
+2025-04-24 09:44:43,183: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:44:43,195: INFO: PLC connected
+2025-04-24 09:44:48,195: ERROR: Failed to start PLC on attempt 1: ADSError: timeout elapsed (1861). 
+2025-04-24 09:44:53,196: INFO: PLC connected
+2025-04-24 09:44:55,295: INFO: Low position detection signal received: False at 2025-04-24 01:59:34.049000
+2025-04-24 09:44:55,309: INFO: try_start_plc succeeded on attempt 2
+2025-04-24 09:44:55,309: INFO: Starting low position detection
+2025-04-24 09:44:55,315: INFO: High position detection signal received: False at 2025-04-24 01:59:34.069000
+2025-04-24 09:45:21,555: INFO: Low position detection signal received: True at 2025-04-24 02:00:00.299000
+2025-04-24 09:45:21,555: INFO: Low position signal changed from False to True, triggering capture
+2025-04-24 09:45:22,720: INFO: Low position capture completed, saved as images\Low_colour_20250424_094522.png and images\Low_depth_20250424_094522.png
+2025-04-24 09:45:22,896: INFO: Low position inspection done
+2025-04-24 09:45:22,896: INFO: Starting high position detection
+2025-04-24 09:45:36,214: INFO: High position detection signal received: True at 2025-04-24 02:00:14.959000
+2025-04-24 09:45:36,214: INFO: High position signal changed from False to True, triggering capture
+2025-04-24 09:45:37,269: INFO: High position capture completed, saved as images\High_colour_20250424_094537.png and images\High_depth_20250424_094537.png
+2025-04-24 09:45:37,425: INFO: High position inspection done
+2025-04-24 09:46:05,513: INFO: ========== Task Summary ==========
+2025-04-24 09:46:05,513: INFO: Tasks:
+  nLeftBoxCount: 12
+  nRightBoxCount: 12
+  nTotalRow: 4
+  nTotalCol: 6
+  aLeftBoxArray: [<class_define.Box object at 0x0000029A94723820>, <class_define.Box object at 0x0000029A94723670>, <class_define.Box object at 0x0000029A94723430>, <class_define.Box object at 0x0000029A94723370>, <class_define.Box object at 0x0000029A94723790>, <class_define.Box object at 0x0000029A94723580>, <class_define.Box object at 0x0000029A94723B20>, <class_define.Box object at 0x0000029A907BB460>, <class_define.Box object at 0x0000029A947237F0>, <class_define.Box object at 0x0000029A947233D0>, <class_define.Box object at 0x0000029A94723940>, <class_define.Box object at 0x0000029A947232E0>]
+  aRightBoxArray: [<class_define.Box object at 0x0000029A94723A00>, <class_define.Box object at 0x0000029A94723550>, <class_define.Box object at 0x0000029A94723730>, <class_define.Box object at 0x0000029A947237C0>, <class_define.Box object at 0x0000029A94723640>, <class_define.Box object at 0x0000029A94723AC0>, <class_define.Box object at 0x0000029A94723A30>, <class_define.Box object at 0x0000029A94723460>, <class_define.Box object at 0x0000029A907BB280>, <class_define.Box object at 0x0000029A94723910>, <class_define.Box object at 0x0000029A94723400>, <class_define.Box object at 0x0000029A94723700>]
+  aHeightEachRow: [Row 1: 1054.642, Row 2: 750.392, Row 3: 446.408, Row 4: 140.742]
+2025-04-24 09:46:05,513: INFO: ========== Left Boxes ==========
+2025-04-24 09:46:05,513: INFO: [Left] ID: 2, Row: 1, Col: 2
+2025-04-24 09:46:05,514: INFO:        Top Grasp Point : x=-50.6, y=1525.1, z=1204.0
+2025-04-24 09:46:05,514: INFO:        Side Grasp Point: x=-50.6, y=1375.1, z=1054.0
+2025-04-24 09:46:05,514: INFO:        Width: 420.9 mm, Height: 311.2 mm
+2025-04-24 09:46:05,514: INFO: [Left] ID: 3, Row: 1, Col: 3
+2025-04-24 09:46:05,514: INFO:        Top Grasp Point : x=360.0, y=1493.0, z=1204.4
+2025-04-24 09:46:05,514: INFO:        Side Grasp Point: x=360.0, y=1343.0, z=1054.4
+2025-04-24 09:46:05,514: INFO:        Width: 418.6 mm, Height: 317.9 mm
+2025-04-24 09:46:05,514: INFO: [Left] ID: 1, Row: 1, Col: 1
+2025-04-24 09:46:05,514: INFO:        Top Grasp Point : x=-455.8, y=1506.7, z=1203.6
+2025-04-24 09:46:05,514: INFO:        Side Grasp Point: x=-455.8, y=1356.7, z=1053.6
+2025-04-24 09:46:05,514: INFO:        Width: 409.7 mm, Height: 311.2 mm
+2025-04-24 09:46:05,514: INFO: [Left] ID: 8, Row: 2, Col: 2
+2025-04-24 09:46:05,514: INFO:        Top Grasp Point : x=-45.4, y=1500.7, z=901.3
+2025-04-24 09:46:05,514: INFO:        Side Grasp Point: x=-45.4, y=1350.7, z=751.3
+2025-04-24 09:46:05,514: INFO:        Width: 418.6 mm, Height: 311.2 mm
+2025-04-24 09:46:05,514: INFO: [Left] ID: 9, Row: 2, Col: 3
+2025-04-24 09:46:05,514: INFO:        Top Grasp Point : x=360.5, y=1503.6, z=900.7
+2025-04-24 09:46:05,514: INFO:        Side Grasp Point: x=360.5, y=1353.6, z=750.7
+2025-04-24 09:46:05,514: INFO:        Width: 416.4 mm, Height: 306.7 mm
+2025-04-24 09:46:05,515: INFO: [Left] ID: 7, Row: 2, Col: 1
+2025-04-24 09:46:05,515: INFO:        Top Grasp Point : x=-453.3, y=1507.9, z=902.0
+2025-04-24 09:46:05,515: INFO:        Side Grasp Point: x=-453.3, y=1357.9, z=752.0
+2025-04-24 09:46:05,515: INFO:        Width: 405.2 mm, Height: 317.9 mm
+2025-04-24 09:46:05,515: INFO: [Left] ID: 14, Row: 3, Col: 2
+2025-04-24 09:46:05,515: INFO:        Top Grasp Point : x=-30.5, y=1518.5, z=593.6
+2025-04-24 09:46:05,515: INFO:        Side Grasp Point: x=-30.5, y=1368.5, z=443.6
+2025-04-24 09:46:05,515: INFO:        Width: 420.9 mm, Height: 320.1 mm
+2025-04-24 09:46:05,515: INFO: [Left] ID: 15, Row: 3, Col: 3
+2025-04-24 09:46:05,515: INFO:        Top Grasp Point : x=374.8, y=1515.4, z=595.5
+2025-04-24 09:46:05,515: INFO:        Side Grasp Point: x=374.8, y=1365.4, z=445.5
+2025-04-24 09:46:05,515: INFO:        Width: 418.6 mm, Height: 311.2 mm
+2025-04-24 09:46:05,515: INFO: [Left] ID: 13, Row: 3, Col: 1
+2025-04-24 09:46:05,515: INFO:        Top Grasp Point : x=-434.8, y=1521.7, z=591.8
+2025-04-24 09:46:05,515: INFO:        Side Grasp Point: x=-434.8, y=1371.7, z=441.8
+2025-04-24 09:46:05,515: INFO:        Width: 407.5 mm, Height: 315.7 mm
+2025-04-24 09:46:05,515: INFO: [Left] ID: 20, Row: 4, Col: 2
+2025-04-24 09:46:05,515: INFO:        Top Grasp Point : x=-44.8, y=1510.0, z=300.0
+2025-04-24 09:46:05,516: INFO:        Side Grasp Point: x=-44.8, y=1375.1, z=141.3
+2025-04-24 09:46:05,516: INFO:        Width: 443.3 mm, Height: 308.9 mm
+2025-04-24 09:46:05,516: INFO: [Left] ID: 21, Row: 4, Col: 3
+2025-04-24 09:46:05,516: INFO:        Top Grasp Point : x=370.2, y=1510.0, z=300.0
+2025-04-24 09:46:05,516: INFO:        Side Grasp Point: x=370.2, y=1369.2, z=140.9
+2025-04-24 09:46:05,516: INFO:        Width: 407.5 mm, Height: 313.4 mm
+2025-04-24 09:46:05,516: INFO: [Left] ID: 19, Row: 4, Col: 1
+2025-04-24 09:46:05,516: INFO:        Top Grasp Point : x=-400.0, y=1510.0, z=300.0
+2025-04-24 09:46:05,516: INFO:        Side Grasp Point: x=-438.8, y=1376.7, z=141.6
+2025-04-24 09:46:05,516: INFO:        Width: 403.0 mm, Height: 324.6 mm
+2025-04-24 09:46:05,516: INFO: ========== Right Boxes ==========
+2025-04-24 09:46:05,516: INFO: [Right] ID: 5, Row: 1, Col: 5
+2025-04-24 09:46:05,516: INFO:         Top Grasp Point : x=-29.9, y=1483.3, z=1205.3
+2025-04-24 09:46:05,516: INFO:         Side Grasp Point: x=-29.9, y=1333.3, z=1055.3
+2025-04-24 09:46:05,516: INFO:         Width: 420.9 mm, Height: 313.4 mm
+2025-04-24 09:46:05,516: INFO: [Right] ID: 6, Row: 1, Col: 6
+2025-04-24 09:46:05,516: INFO:         Top Grasp Point : x=380.5, y=1484.6, z=1205.7
+2025-04-24 09:46:05,516: INFO:         Side Grasp Point: x=380.5, y=1334.6, z=1055.7
+2025-04-24 09:46:05,516: INFO:         Width: 414.2 mm, Height: 313.4 mm
+2025-04-24 09:46:05,516: INFO: [Right] ID: 4, Row: 1, Col: 4
+2025-04-24 09:46:05,516: INFO:         Top Grasp Point : x=-435.9, y=1494.0, z=1204.9
+2025-04-24 09:46:05,516: INFO:         Side Grasp Point: x=-435.9, y=1344.0, z=1054.9
+2025-04-24 09:46:05,516: INFO:         Width: 411.9 mm, Height: 315.7 mm
+2025-04-24 09:46:05,516: INFO: [Right] ID: 11, Row: 2, Col: 5
+2025-04-24 09:46:05,516: INFO:         Top Grasp Point : x=-22.2, y=1487.0, z=899.4
+2025-04-24 09:46:05,517: INFO:         Side Grasp Point: x=-22.2, y=1337.0, z=749.4
+2025-04-24 09:46:05,517: INFO:         Width: 416.4 mm, Height: 311.2 mm
+2025-04-24 09:46:05,517: INFO: [Right] ID: 12, Row: 2, Col: 6
+2025-04-24 09:46:05,517: INFO:         Top Grasp Point : x=384.5, y=1495.2, z=898.8
+2025-04-24 09:46:05,517: INFO:         Side Grasp Point: x=384.5, y=1345.2, z=748.8
+2025-04-24 09:46:05,517: INFO:         Width: 416.4 mm, Height: 313.4 mm
+2025-04-24 09:46:05,517: INFO: [Right] ID: 10, Row: 2, Col: 4
+2025-04-24 09:46:05,517: INFO:         Top Grasp Point : x=-431.5, y=1499.6, z=900.1
+2025-04-24 09:46:05,517: INFO:         Side Grasp Point: x=-431.5, y=1349.6, z=750.1
+2025-04-24 09:46:05,517: INFO:         Width: 414.2 mm, Height: 311.2 mm
+2025-04-24 09:46:05,517: INFO: [Right] ID: 17, Row: 3, Col: 5
+2025-04-24 09:46:05,517: INFO:         Top Grasp Point : x=-15.5, y=1490.1, z=599.2
+2025-04-24 09:46:05,517: INFO:         Side Grasp Point: x=-15.5, y=1340.1, z=449.2
+2025-04-24 09:46:05,517: INFO:         Width: 411.9 mm, Height: 313.4 mm
+2025-04-24 09:46:05,517: INFO: [Right] ID: 18, Row: 3, Col: 6
+2025-04-24 09:46:05,517: INFO:         Top Grasp Point : x=389.6, y=1498.0, z=601.0
+2025-04-24 09:46:05,517: INFO:         Side Grasp Point: x=389.6, y=1348.0, z=451.0
+2025-04-24 09:46:05,517: INFO:         Width: 407.5 mm, Height: 313.4 mm
+2025-04-24 09:46:05,517: INFO: [Right] ID: 16, Row: 3, Col: 4
+2025-04-24 09:46:05,517: INFO:         Top Grasp Point : x=-416.2, y=1501.3, z=597.4
+2025-04-24 09:46:05,518: INFO:         Side Grasp Point: x=-416.2, y=1351.3, z=447.4
+2025-04-24 09:46:05,518: INFO:         Width: 416.4 mm, Height: 313.4 mm
+2025-04-24 09:46:05,518: INFO: [Right] ID: 23, Row: 4, Col: 5
+2025-04-24 09:46:05,518: INFO:         Top Grasp Point : x=-24.9, y=1493.4, z=300.0
+2025-04-24 09:46:05,518: INFO:         Side Grasp Point: x=-24.9, y=1343.4, z=140.2
+2025-04-24 09:46:05,518: INFO:         Width: 407.5 mm, Height: 324.6 mm
+2025-04-24 09:46:05,518: INFO: [Right] ID: 24, Row: 4, Col: 6
+2025-04-24 09:46:05,518: INFO:         Top Grasp Point : x=374.2, y=1495.1, z=300.0
+2025-04-24 09:46:05,518: INFO:         Side Grasp Point: x=374.2, y=1345.1, z=139.9
+2025-04-24 09:46:05,518: INFO:         Width: 403.0 mm, Height: 326.9 mm
+2025-04-24 09:46:05,518: INFO: [Right] ID: 22, Row: 4, Col: 4
+2025-04-24 09:46:05,518: INFO:         Top Grasp Point : x=-400.0, y=1505.0, z=300.0
+2025-04-24 09:46:05,518: INFO:         Side Grasp Point: x=-426.0, y=1355.0, z=140.6
+2025-04-24 09:46:05,518: INFO:         Width: 411.9 mm, Height: 308.9 mm
+2025-04-24 09:46:05,848: INFO: Data successfully written to PLC
+2025-04-24 09:46:05,848: INFO: Camera.bInspection_IPC_Done set to True
+2025-04-24 09:46:05,849: INFO: Detection and task transmission completed
+2025-04-24 09:46:05,850: INFO: Starting low position detection
+2025-04-24 09:46:05,884: INFO: Low position detection signal received: False at 2025-04-24 02:00:44.629000
+2025-04-24 09:46:05,884: INFO: High position detection signal received: False at 2025-04-24 02:00:44.629000
+2025-04-24 09:47:05,916: WARNING: Still waiting for low position signal after 60 seconds
+2025-04-24 09:48:06,093: WARNING: Still waiting for low position signal after 120 seconds
+2025-04-24 09:49:06,289: WARNING: Still waiting for low position signal after 180 seconds
+2025-04-24 09:50:06,986: WARNING: Still waiting for low position signal after 241 seconds
+2025-04-24 09:51:07,581: WARNING: Still waiting for low position signal after 301 seconds
+2025-04-24 09:52:08,032: WARNING: Still waiting for low position signal after 362 seconds
+2025-04-24 09:53:18,029: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:53:18,037: INFO: PLC connected
+2025-04-24 09:53:23,038: ERROR: Failed to start PLC on attempt 1: ADSError: timeout elapsed (1861). 
+2025-04-24 09:53:28,038: INFO: PLC connected
+2025-04-24 09:53:30,150: INFO: Low position detection signal received: False at 2025-04-24 02:08:08.917000
+2025-04-24 09:53:30,161: INFO: try_start_plc succeeded on attempt 2
+2025-04-24 09:53:30,161: INFO: Starting low position detection
+2025-04-24 09:53:30,171: INFO: High position detection signal received: False at 2025-04-24 02:08:08.937000
+2025-04-24 09:53:43,399: INFO: Low position detection signal received: True at 2025-04-24 02:08:22.157000
+2025-04-24 09:53:43,399: INFO: Low position signal changed from False to True, triggering capture
+2025-04-24 09:53:45,695: INFO: Low position capture completed, saved as images\Low_colour_20250424_095345.png and images\Low_depth_20250424_095345.png
+2025-04-24 09:53:45,829: INFO: Low position inspection done
+2025-04-24 09:53:45,829: INFO: Starting high position detection
+2025-04-24 09:53:59,149: INFO: High position detection signal received: True at 2025-04-24 02:08:37.907000
+2025-04-24 09:53:59,149: INFO: High position signal changed from False to True, triggering capture
+2025-04-24 09:54:00,954: INFO: High position capture completed, saved as images\High_colour_20250424_095400.png and images\High_depth_20250424_095400.png
+2025-04-24 09:54:01,070: INFO: High position inspection done
+2025-04-24 09:55:23,917: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:55:23,926: INFO: PLC connected
+2025-04-24 09:55:24,007: INFO: Low position detection signal received: False at 2025-04-24 02:10:02.777000
+2025-04-24 09:55:24,025: INFO: try_start_plc succeeded on attempt 1
+2025-04-24 09:55:24,025: INFO: Starting low position detection
+2025-04-24 09:55:24,028: INFO: High position detection signal received: False at 2025-04-24 02:10:02.797000
+2025-04-24 09:55:46,677: INFO: Low position detection signal received: True at 2025-04-24 02:10:25.437000
+2025-04-24 09:55:46,677: INFO: Low position signal changed from False to True, triggering capture
+2025-04-24 09:55:49,422: INFO: Low position capture completed, saved as images\Low_colour_20250424_095549.png and images\Low_depth_20250424_095549.png
+2025-04-24 09:55:49,547: INFO: Low position inspection done
+2025-04-24 09:55:49,547: INFO: Starting high position detection
+2025-04-24 09:56:02,866: INFO: High position detection signal received: True at 2025-04-24 02:10:41.627000
+2025-04-24 09:56:02,866: INFO: High position signal changed from False to True, triggering capture
+2025-04-24 09:56:04,428: INFO: High position capture completed, saved as images\High_colour_20250424_095604.png and images\High_depth_20250424_095604.png
+2025-04-24 09:56:04,541: INFO: High position inspection done
+2025-04-24 09:58:05,114: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:58:05,122: INFO: PLC connected
+2025-04-24 09:58:05,131: ERROR: Failed to start PLC on attempt 1: ADSError: symbol not found (1808). 
+2025-04-24 09:58:29,938: INFO: try_configure succeeded on attempt 1
+2025-04-24 09:58:29,950: INFO: PLC connected
+2025-04-24 09:58:30,033: INFO: Low position detection signal received: False at 2025-04-24 02:13:08.807000
+2025-04-24 09:58:30,043: INFO: try_start_plc succeeded on attempt 1
+2025-04-24 09:58:30,043: INFO: Starting low position detection
+2025-04-24 09:58:30,045: INFO: High position detection signal received: False at 2025-04-24 02:13:08.817000
+2025-04-24 09:58:36,894: INFO: Low position detection signal received: True at 2025-04-24 02:13:15.657000
+2025-04-24 09:58:36,894: INFO: Low position signal changed from False to True, triggering capture
+2025-04-24 09:58:43,602: INFO: Low position capture completed, saved as images\Low_colour_20250424_095843.png and images\Low_depth_20250424_095843.png
+2025-04-24 09:58:43,730: INFO: Low position inspection done
+2025-04-24 09:58:43,730: INFO: Starting high position detection
+2025-04-24 09:58:57,043: INFO: High position detection signal received: True at 2025-04-24 02:13:35.807000
+2025-04-24 09:58:57,043: INFO: High position signal changed from False to True, triggering capture
+2025-04-24 09:59:02,549: INFO: High position capture completed, saved as images\High_colour_20250424_095902.png and images\High_depth_20250424_095902.png
+2025-04-24 09:59:02,651: INFO: High position inspection done
+2025-04-24 09:59:32,083: INFO: ========== Task Summary ==========
+2025-04-24 09:59:32,083: INFO: Tasks:
+  nLeftBoxCount: 12
+  nRightBoxCount: 12
+  nTotalRow: 4
+  nTotalCol: 6
+  aLeftBoxArray: [<class_define.Box object at 0x000002B2F96C3640>, <class_define.Box object at 0x000002B2F96C3940>, <class_define.Box object at 0x000002B2F96C3430>, <class_define.Box object at 0x000002B2F96C3730>, <class_define.Box object at 0x000002B2F96C3820>, <class_define.Box object at 0x000002B2F96C37C0>, <class_define.Box object at 0x000002B2E9C0A4F0>, <class_define.Box object at 0x000002B2F96C37F0>, <class_define.Box object at 0x000002B2F96C3670>, <class_define.Box object at 0x000002B2F96C33D0>, <class_define.Box object at 0x000002B2F96C3A30>, <class_define.Box object at 0x000002B2F96C32E0>]
+  aRightBoxArray: [<class_define.Box object at 0x000002B2F852F220>, <class_define.Box object at 0x000002B2F96C3550>, <class_define.Box object at 0x000002B2E9C0A250>, <class_define.Box object at 0x000002B2F96C3AC0>, <class_define.Box object at 0x000002B2F96C3460>, <class_define.Box object at 0x000002B2F96C3910>, <class_define.Box object at 0x000002B2F96C3A00>, <class_define.Box object at 0x000002B2F96C3580>, <class_define.Box object at 0x000002B2F96C3B20>, <class_define.Box object at 0x000002B2F96C3790>, <class_define.Box object at 0x000002B2F96C3400>, <class_define.Box object at 0x000002B2F96C3700>]
+  aHeightEachRow: [Row 1: 1054.767, Row 2: 750.180, Row 3: 447.335, Row 4: 140.037]
+2025-04-24 09:59:32,083: INFO: ========== Left Boxes ==========
+2025-04-24 09:59:32,083: INFO: [Left] ID: 2, Row: 1, Col: 2
+2025-04-24 09:59:32,083: INFO:        Top Grasp Point : x=-53.5, y=1529.4, z=1205.4
+2025-04-24 09:59:32,083: INFO:        Side Grasp Point: x=-53.5, y=1379.4, z=1055.4
+2025-04-24 09:59:32,083: INFO:        Width: 457.8 mm, Height: 315.0 mm
+2025-04-24 09:59:32,083: INFO: [Left] ID: 3, Row: 1, Col: 3
+2025-04-24 09:59:32,083: INFO:        Top Grasp Point : x=373.1, y=1526.8, z=1205.0
+2025-04-24 09:59:32,084: INFO:        Side Grasp Point: x=373.1, y=1376.8, z=1055.0
+2025-04-24 09:59:32,084: INFO:        Width: 419.2 mm, Height: 315.0 mm
+2025-04-24 09:59:32,084: INFO: [Left] ID: 1, Row: 1, Col: 1
+2025-04-24 09:59:32,084: INFO:        Top Grasp Point : x=-441.4, y=1530.3, z=1205.8
+2025-04-24 09:59:32,084: INFO:        Side Grasp Point: x=-441.4, y=1380.3, z=1055.8
+2025-04-24 09:59:32,084: INFO:        Width: 421.5 mm, Height: 315.0 mm
+2025-04-24 09:59:32,084: INFO: [Left] ID: 8, Row: 2, Col: 2
+2025-04-24 09:59:32,084: INFO:        Top Grasp Point : x=-23.3, y=1508.2, z=901.3
+2025-04-24 09:59:32,084: INFO:        Side Grasp Point: x=-23.3, y=1358.2, z=751.3
+2025-04-24 09:59:32,084: INFO:        Width: 414.7 mm, Height: 305.9 mm
+2025-04-24 09:59:32,084: INFO: [Left] ID: 9, Row: 2, Col: 3
+2025-04-24 09:59:32,084: INFO:        Top Grasp Point : x=377.4, y=1510.8, z=900.5
+2025-04-24 09:59:32,084: INFO:        Side Grasp Point: x=377.4, y=1360.8, z=750.5
+2025-04-24 09:59:32,084: INFO:        Width: 417.0 mm, Height: 303.7 mm
+2025-04-24 09:59:32,084: INFO: [Left] ID: 7, Row: 2, Col: 1
+2025-04-24 09:59:32,084: INFO:        Top Grasp Point : x=-436.4, y=1518.0, z=902.0
+2025-04-24 09:59:32,084: INFO:        Side Grasp Point: x=-436.4, y=1368.0, z=752.0
+2025-04-24 09:59:32,085: INFO:        Width: 405.6 mm, Height: 312.7 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 14, Row: 3, Col: 2
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=-13.8, y=1526.2, z=595.3
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=-13.8, y=1376.2, z=445.3
+2025-04-24 09:59:32,085: INFO:        Width: 414.7 mm, Height: 312.7 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 15, Row: 3, Col: 3
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=392.8, y=1525.5, z=596.7
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=392.8, y=1375.5, z=446.7
+2025-04-24 09:59:32,085: INFO:        Width: 419.2 mm, Height: 317.3 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 13, Row: 3, Col: 1
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=-421.7, y=1525.7, z=593.9
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=-421.7, y=1375.7, z=443.9
+2025-04-24 09:59:32,085: INFO:        Width: 410.2 mm, Height: 312.7 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 20, Row: 4, Col: 2
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=-13.1, y=1510.0, z=300.0
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=-13.1, y=1382.7, z=139.6
+2025-04-24 09:59:32,085: INFO:        Width: 412.4 mm, Height: 324.1 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 21, Row: 4, Col: 3
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=388.3, y=1510.0, z=300.0
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=388.3, y=1371.9, z=139.9
+2025-04-24 09:59:32,085: INFO:        Width: 414.7 mm, Height: 317.3 mm
+2025-04-24 09:59:32,085: INFO: [Left] ID: 19, Row: 4, Col: 1
+2025-04-24 09:59:32,085: INFO:        Top Grasp Point : x=-400.0, y=1510.0, z=300.0
+2025-04-24 09:59:32,085: INFO:        Side Grasp Point: x=-411.7, y=1387.8, z=139.4
+2025-04-24 09:59:32,085: INFO:        Width: 392.0 mm, Height: 312.7 mm
+2025-04-24 09:59:32,085: INFO: ========== Right Boxes ==========
+2025-04-24 09:59:32,085: INFO: [Right] ID: 5, Row: 1, Col: 5
+2025-04-24 09:59:32,085: INFO:         Top Grasp Point : x=-13.0, y=1506.4, z=1204.1
+2025-04-24 09:59:32,087: INFO:         Side Grasp Point: x=-13.0, y=1356.4, z=1054.1
+2025-04-24 09:59:32,087: INFO:         Width: 421.5 mm, Height: 315.0 mm
+2025-04-24 09:59:32,087: INFO: [Right] ID: 6, Row: 1, Col: 6
+2025-04-24 09:59:32,087: INFO:         Top Grasp Point : x=396.5, y=1491.4, z=1203.7
+2025-04-24 09:59:32,087: INFO:         Side Grasp Point: x=396.5, y=1341.4, z=1053.7
+2025-04-24 09:59:32,087: INFO:         Width: 403.4 mm, Height: 319.5 mm
+2025-04-24 09:59:32,087: INFO: [Right] ID: 4, Row: 1, Col: 4
+2025-04-24 09:59:32,087: INFO:         Top Grasp Point : x=-422.4, y=1513.2, z=1204.6
+2025-04-24 09:59:32,087: INFO:         Side Grasp Point: x=-422.4, y=1363.2, z=1054.6
+2025-04-24 09:59:32,087: INFO:         Width: 412.4 mm, Height: 317.3 mm
+2025-04-24 09:59:32,087: INFO: [Right] ID: 11, Row: 2, Col: 5
+2025-04-24 09:59:32,087: INFO:         Top Grasp Point : x=-8.1, y=1505.3, z=899.1
+2025-04-24 09:59:32,087: INFO:         Side Grasp Point: x=-8.1, y=1355.3, z=749.1
+2025-04-24 09:59:32,087: INFO:         Width: 417.0 mm, Height: 315.0 mm
+2025-04-24 09:59:32,087: INFO: [Right] ID: 12, Row: 2, Col: 6
+2025-04-24 09:59:32,087: INFO:         Top Grasp Point : x=396.5, y=1502.5, z=898.4
+2025-04-24 09:59:32,087: INFO:         Side Grasp Point: x=396.5, y=1352.5, z=748.4
+2025-04-24 09:59:32,087: INFO:         Width: 412.4 mm, Height: 305.9 mm
+2025-04-24 09:59:32,087: INFO: [Right] ID: 10, Row: 2, Col: 4
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=-413.1, y=1509.4, z=899.8
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=-413.1, y=1359.4, z=749.8
+2025-04-24 09:59:32,088: INFO:         Width: 412.4 mm, Height: 312.7 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 17, Row: 3, Col: 5
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=3.4, y=1502.3, z=599.4
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=3.4, y=1352.3, z=449.4
+2025-04-24 09:59:32,088: INFO:         Width: 414.7 mm, Height: 312.7 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 18, Row: 3, Col: 6
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=407.1, y=1504.6, z=600.8
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=407.1, y=1354.6, z=450.8
+2025-04-24 09:59:32,088: INFO:         Width: 407.9 mm, Height: 312.7 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 16, Row: 3, Col: 4
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=-402.7, y=1510.2, z=598.0
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=-402.7, y=1360.2, z=448.0
+2025-04-24 09:59:32,088: INFO:         Width: 417.0 mm, Height: 310.5 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 23, Row: 4, Col: 5
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=-7.9, y=1505.9, z=300.0
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=-7.9, y=1355.9, z=140.4
+2025-04-24 09:59:32,088: INFO:         Width: 421.5 mm, Height: 312.7 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 24, Row: 4, Col: 6
+2025-04-24 09:59:32,088: INFO:         Top Grasp Point : x=396.4, y=1505.5, z=300.0
+2025-04-24 09:59:32,088: INFO:         Side Grasp Point: x=396.4, y=1355.5, z=140.7
+2025-04-24 09:59:32,088: INFO:         Width: 407.9 mm, Height: 324.1 mm
+2025-04-24 09:59:32,088: INFO: [Right] ID: 22, Row: 4, Col: 4
+2025-04-24 09:59:32,089: INFO:         Top Grasp Point : x=-400.0, y=1510.0, z=300.0
+2025-04-24 09:59:32,089: INFO:         Side Grasp Point: x=-407.7, y=1364.8, z=140.2
+2025-04-24 09:59:32,089: INFO:         Width: 410.2 mm, Height: 310.5 mm
+2025-04-24 09:59:32,438: INFO: Data successfully written to PLC
+2025-04-24 09:59:32,438: INFO: Camera.bInspection_IPC_Done set to True
+2025-04-24 09:59:32,439: INFO: Detection and task transmission completed
+2025-04-24 09:59:32,439: INFO: Starting low position detection
+2025-04-24 09:59:32,472: INFO: Low position detection signal received: False at 2025-04-24 02:14:11.237000
+2025-04-24 09:59:32,472: INFO: High position detection signal received: False at 2025-04-24 02:14:11.237000
+2025-04-24 10:00:32,826: WARNING: Still waiting for low position signal after 60 seconds
+2025-04-24 10:01:33,262: WARNING: Still waiting for low position signal after 120 seconds
+2025-04-24 10:02:33,303: WARNING: Still waiting for low position signal after 180 seconds
+2025-04-24 10:03:34,817: WARNING: Still waiting for low position signal after 242 seconds
+2025-04-24 10:04:36,202: WARNING: Still waiting for low position signal after 303 seconds
+2025-04-24 10:05:37,627: WARNING: Still waiting for low position signal after 365 seconds
+2025-04-24 10:06:39,092: WARNING: Still waiting for low position signal after 426 seconds
+2025-04-24 12:31:54,194: INFO: try_configure succeeded on attempt 1
+2025-04-24 12:31:54,202: INFO: PLC connected
+2025-04-24 12:31:59,202: ERROR: Failed to start PLC on attempt 1: ADSError: timeout elapsed (1861). 
+2025-04-24 12:32:04,203: INFO: PLC connected
+2025-04-24 12:32:06,314: INFO: Low position detection signal received: False at 2025-04-24 04:46:45.543000
+2025-04-24 12:32:06,325: INFO: try_start_plc succeeded on attempt 2
+2025-04-24 12:32:06,325: INFO: Starting low position detection
+2025-04-24 12:32:06,335: INFO: High position detection signal received: False at 2025-04-24 04:46:45.563000
+2025-04-24 12:33:05,313: INFO: Low position detection signal received: True at 2025-04-24 04:47:44.533000
+2025-04-24 12:33:05,313: INFO: Low position signal changed from False to True, triggering capture
+2025-04-24 12:33:11,706: INFO: Low position capture completed, saved as images\Low_colour_20250424_123311.png and images\Low_depth_20250424_123311.png
+2025-04-24 12:33:11,840: INFO: Low position inspection done
+2025-04-24 12:33:11,840: INFO: Starting high position detection
+2025-04-24 12:33:25,153: INFO: High position detection signal received: True at 2025-04-24 04:48:04.373000
+2025-04-24 12:33:25,153: INFO: High position signal changed from False to True, triggering capture
+2025-04-24 12:33:30,183: INFO: High position capture completed, saved as images\High_colour_20250424_123330.png and images\High_depth_20250424_123330.png
+2025-04-24 12:33:30,290: INFO: High position inspection done
+2025-04-24 12:33:55,221: INFO: ========== Task Summary ==========
+2025-04-24 12:33:55,221: INFO: Tasks:
+  nLeftBoxCount: 12
+  nRightBoxCount: 12
+  nTotalRow: 4
+  nTotalCol: 6
+  aLeftBoxArray: [<class_define.Box object at 0x0000023D4D130490>, <class_define.Box object at 0x0000023D4D1301F0>, <class_define.Box object at 0x0000023D4D1301C0>, <class_define.Box object at 0x0000023D4D1305B0>, <class_define.Box object at 0x0000023D4D1303A0>, <class_define.Box object at 0x0000023D4D130640>, <class_define.Box object at 0x0000023D0B48CA30>, <class_define.Box object at 0x0000023D4D1304C0>, <class_define.Box object at 0x0000023D4D130100>, <class_define.Box object at 0x0000023D0B48C850>, <class_define.Box object at 0x0000023D0B48CD30>, <class_define.Box object at 0x0000023D0B48C9A0>]
+  aRightBoxArray: [<class_define.Box object at 0x0000023D4D130370>, <class_define.Box object at 0x0000023D4D130310>, <class_define.Box object at 0x0000023D4D130A00>, <class_define.Box object at 0x0000023D4D1306A0>, <class_define.Box object at 0x0000023D4D130340>, <class_define.Box object at 0x0000023D4D1302B0>, <class_define.Box object at 0x0000023D4D130910>, <class_define.Box object at 0x0000023D4D1300D0>, <class_define.Box object at 0x0000023D4D130580>, <class_define.Box object at 0x0000023D4D130280>, <class_define.Box object at 0x0000023D0B48C9D0>, <class_define.Box object at 0x0000023D0B48CB20>]
+  aHeightEachRow: [Row 1: 1050.812, Row 2: 745.563, Row 3: 441.131, Row 4: 134.785]
+2025-04-24 12:33:55,221: INFO: ========== Left Boxes ==========
+2025-04-24 12:33:55,221: INFO: [Left] ID: 2, Row: 1, Col: 2
+2025-04-24 12:33:55,221: INFO:        Top Grasp Point : x=-19.5, y=1504.6, z=1200.4
+2025-04-24 12:33:55,221: INFO:        Side Grasp Point: x=-19.5, y=1354.6, z=1050.4
+2025-04-24 12:33:55,221: INFO:        Width: 426.9 mm, Height: 310.0 mm
+2025-04-24 12:33:55,221: INFO: [Left] ID: 3, Row: 1, Col: 3
+2025-04-24 12:33:55,221: INFO:        Top Grasp Point : x=389.8, y=1502.0, z=1200.7
+2025-04-24 12:33:55,221: INFO:        Side Grasp Point: x=389.8, y=1352.0, z=1050.7
+2025-04-24 12:33:55,221: INFO:        Width: 415.6 mm, Height: 314.5 mm
+2025-04-24 12:33:55,221: INFO: [Left] ID: 1, Row: 1, Col: 1
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=-432.9, y=1526.5, z=1200.1
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=-432.9, y=1376.5, z=1050.1
+2025-04-24 12:33:55,222: INFO:        Width: 417.9 mm, Height: 310.0 mm
+2025-04-24 12:33:55,222: INFO: [Left] ID: 8, Row: 2, Col: 2
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=-14.3, y=1509.5, z=894.8
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=-14.3, y=1359.5, z=744.8
+2025-04-24 12:33:55,222: INFO:        Width: 422.4 mm, Height: 316.8 mm
+2025-04-24 12:33:55,222: INFO: [Left] ID: 9, Row: 2, Col: 3
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=392.1, y=1511.1, z=895.3
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=392.1, y=1361.1, z=745.3
+2025-04-24 12:33:55,222: INFO:        Width: 415.6 mm, Height: 312.3 mm
+2025-04-24 12:33:55,222: INFO: [Left] ID: 7, Row: 2, Col: 1
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=-420.2, y=1523.7, z=894.4
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=-420.2, y=1373.7, z=744.4
+2025-04-24 12:33:55,222: INFO:        Width: 404.4 mm, Height: 316.8 mm
+2025-04-24 12:33:55,222: INFO: [Left] ID: 14, Row: 3, Col: 2
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=-21.1, y=1523.1, z=589.1
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=-21.1, y=1373.1, z=439.1
+2025-04-24 12:33:55,222: INFO:        Width: 424.6 mm, Height: 312.3 mm
+2025-04-24 12:33:55,222: INFO: [Left] ID: 15, Row: 3, Col: 3
+2025-04-24 12:33:55,222: INFO:        Top Grasp Point : x=391.5, y=1519.5, z=590.5
+2025-04-24 12:33:55,222: INFO:        Side Grasp Point: x=391.5, y=1369.5, z=440.5
+2025-04-24 12:33:55,222: INFO:        Width: 420.1 mm, Height: 314.5 mm
+2025-04-24 12:33:55,223: INFO: [Left] ID: 13, Row: 3, Col: 1
+2025-04-24 12:33:55,223: INFO:        Top Grasp Point : x=-424.6, y=1526.1, z=587.8
+2025-04-24 12:33:55,223: INFO:        Side Grasp Point: x=-424.6, y=1376.1, z=437.8
+2025-04-24 12:33:55,223: INFO:        Width: 399.9 mm, Height: 316.8 mm
+2025-04-24 12:33:55,223: INFO: [Left] ID: 20, Row: 4, Col: 2
+2025-04-24 12:33:55,223: INFO:        Top Grasp Point : x=-19.5, y=1510.0, z=300.0
+2025-04-24 12:33:55,223: INFO:        Side Grasp Point: x=-19.5, y=1377.4, z=130.5
+2025-04-24 12:33:55,223: INFO:        Width: 422.4 mm, Height: 312.3 mm
+2025-04-24 12:33:55,223: INFO: [Left] ID: 21, Row: 4, Col: 3
+2025-04-24 12:33:55,223: INFO:        Top Grasp Point : x=387.5, y=1510.0, z=300.0
+2025-04-24 12:33:55,223: INFO:        Side Grasp Point: x=387.5, y=1372.7, z=133.4
+2025-04-24 12:33:55,223: INFO:        Width: 411.1 mm, Height: 310.0 mm
+2025-04-24 12:33:55,223: INFO: [Left] ID: 19, Row: 4, Col: 1
+2025-04-24 12:33:55,223: INFO:        Top Grasp Point : x=-400.0, y=1510.0, z=300.0
+2025-04-24 12:33:55,223: INFO:        Side Grasp Point: x=-414.9, y=1378.9, z=127.8
+2025-04-24 12:33:55,223: INFO:        Width: 390.9 mm, Height: 332.5 mm
+2025-04-24 12:33:55,223: INFO: ========== Right Boxes ==========
+2025-04-24 12:33:55,223: INFO: [Right] ID: 5, Row: 1, Col: 5
+2025-04-24 12:33:55,223: INFO:         Top Grasp Point : x=4.2, y=1489.8, z=1201.2
+2025-04-24 12:33:55,223: INFO:         Side Grasp Point: x=4.2, y=1339.8, z=1051.2
+2025-04-24 12:33:55,223: INFO:         Width: 417.9 mm, Height: 310.0 mm
+2025-04-24 12:33:55,223: INFO: [Right] ID: 6, Row: 1, Col: 6
+2025-04-24 12:33:55,223: INFO:         Top Grasp Point : x=416.1, y=1498.0, z=1201.5
+2025-04-24 12:33:55,223: INFO:         Side Grasp Point: x=416.1, y=1348.0, z=1051.5
+2025-04-24 12:33:55,223: INFO:         Width: 417.9 mm, Height: 310.0 mm
+2025-04-24 12:33:55,223: INFO: [Right] ID: 4, Row: 1, Col: 4
+2025-04-24 12:33:55,223: INFO:         Top Grasp Point : x=-400.1, y=1513.7, z=1201.0
+2025-04-24 12:33:55,223: INFO:         Side Grasp Point: x=-400.1, y=1363.7, z=1051.0
+2025-04-24 12:33:55,223: INFO:         Width: 415.6 mm, Height: 314.5 mm
+2025-04-24 12:33:55,223: INFO: [Right] ID: 11, Row: 2, Col: 5
+2025-04-24 12:33:55,223: INFO:         Top Grasp Point : x=3.8, y=1501.3, z=896.3
+2025-04-24 12:33:55,223: INFO:         Side Grasp Point: x=3.8, y=1351.3, z=746.3
+2025-04-24 12:33:55,224: INFO:         Width: 415.6 mm, Height: 314.5 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 12, Row: 2, Col: 6
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=405.3, y=1500.3, z=896.8
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=405.3, y=1350.3, z=746.8
+2025-04-24 12:33:55,224: INFO:         Width: 393.2 mm, Height: 314.5 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 10, Row: 2, Col: 4
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=-400.3, y=1503.3, z=895.8
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=-400.3, y=1353.3, z=745.8
+2025-04-24 12:33:55,224: INFO:         Width: 411.1 mm, Height: 307.8 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 17, Row: 3, Col: 5
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=9.2, y=1501.2, z=593.1
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=9.2, y=1351.2, z=443.1
+2025-04-24 12:33:55,224: INFO:         Width: 420.1 mm, Height: 314.5 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 18, Row: 3, Col: 6
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=410.2, y=1494.9, z=594.5
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=410.2, y=1344.9, z=444.5
+2025-04-24 12:33:55,224: INFO:         Width: 404.4 mm, Height: 314.5 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 16, Row: 3, Col: 4
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=-399.3, y=1512.4, z=591.8
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=-399.3, y=1362.4, z=441.8
+2025-04-24 12:33:55,224: INFO:         Width: 413.4 mm, Height: 316.8 mm
+2025-04-24 12:33:55,224: INFO: [Right] ID: 23, Row: 4, Col: 5
+2025-04-24 12:33:55,224: INFO:         Top Grasp Point : x=-5.9, y=1506.2, z=300.0
+2025-04-24 12:33:55,224: INFO:         Side Grasp Point: x=-5.9, y=1356.2, z=139.0
+2025-04-24 12:33:55,224: INFO:         Width: 420.1 mm, Height: 307.8 mm
+2025-04-24 12:33:55,225: INFO: [Right] ID: 24, Row: 4, Col: 6
+2025-04-24 12:33:55,225: INFO:         Top Grasp Point : x=394.9, y=1499.2, z=300.0
+2025-04-24 12:33:55,225: INFO:         Side Grasp Point: x=394.9, y=1349.2, z=141.8
+2025-04-24 12:33:55,225: INFO:         Width: 388.7 mm, Height: 316.8 mm
+2025-04-24 12:33:55,225: INFO: [Right] ID: 22, Row: 4, Col: 4
+2025-04-24 12:33:55,225: INFO:         Top Grasp Point : x=-400.0, y=1510.0, z=300.0
+2025-04-24 12:33:55,225: INFO:         Side Grasp Point: x=-410.7, y=1366.4, z=136.2
+2025-04-24 12:33:55,225: INFO:         Width: 415.6 mm, Height: 319.0 mm
+2025-04-24 12:33:55,569: INFO: Data successfully written to PLC
+2025-04-24 12:33:55,569: INFO: Camera.bInspection_IPC_Done set to True
+2025-04-24 12:33:55,570: INFO: Detection and task transmission completed
+2025-04-24 12:33:55,570: INFO: Starting low position detection
+2025-04-24 12:33:55,602: INFO: Low position detection signal received: False at 2025-04-24 04:48:34.823000
+2025-04-24 12:33:55,602: INFO: High position detection signal received: False at 2025-04-24 04:48:34.823000
+2025-04-24 12:34:56,731: WARNING: Still waiting for low position signal after 61 seconds
+2025-04-24 12:35:57,792: WARNING: Still waiting for low position signal after 122 seconds
+2025-04-24 12:36:58,866: WARNING: Still waiting for low position signal after 183 seconds
+2025-04-24 12:37:59,888: WARNING: Still waiting for low position signal after 244 seconds
+2025-04-24 12:39:01,227: WARNING: Still waiting for low position signal after 305 seconds
