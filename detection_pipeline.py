@@ -117,6 +117,21 @@ def process_detections(
     boxes = create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices)
     assign_box_sides(boxes)
 
+    if boxes:
+        max_row = max(box.row for box in boxes)
+        print(f"Max row: {max_row}")
+        if max_row > 1:
+            box_map = {(box.row, box.col): box for box in boxes}
+            for box in boxes:
+                if box.row == max_row:  # 最下面一行
+                    above_box = box_map.get((max_row - 1, box.col))
+                    if above_box:
+                        # 更新aGraspPoint_Top，使用上方箱子的z - GRID_PARAMS['z_spacing']*500
+                        box.aGraspPoint_Top = np.array([
+                            np.clip(box.aGraspPoint_Side[0], -400, 400),
+                            np.clip(box.aGraspPoint_Side[1] + GRID_PARAMS['y_spacing'] * 500, None, 1510),
+                            300
+                        ])
     # for box in boxes:
     #     print(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
     #     print(

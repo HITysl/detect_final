@@ -568,24 +568,24 @@ def create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices
             height_3d = all_detected_info[orig_idx]['height_3d'] * 1000
             box = Box(id, row, col, coords_3d, width_3d, height_3d)
             boxes.append(box)
-    if boxes:
-        max_row = max(box.row for box in boxes)
-        print(f"Max row: {max_row}")
-        if max_row > 1:
-            box_map = {(box.row, box.col): box for box in boxes}
-            for box in boxes:
-                if box.row == max_row:  # 最下面一行
-                    above_box = box_map.get((max_row - 1, box.col))
-                    if above_box:
-                        # 更新aGraspPoint_Top，使用上方箱子的z - GRID_PARAMS['z_spacing']*500
-                        box.aGraspPoint_Top = np.array([
-                            box.aGraspPoint_Side[0],
-                            box.aGraspPoint_Side[1] + GRID_PARAMS['y_spacing'] * 500,
-                            300
-                        ])
-                        # 调试打印更新后的箱子
-                        print(
-                            f"Updated Box id={box.id}, row={box.row}, col={box.col}, Top z={box.aGraspPoint_Top[2]}, Above z={above_box.aGraspPoint_Side[2]}")
+    # if boxes:
+    #     max_row = max(box.row for box in boxes)
+    #     print(f"Max row: {max_row}")
+    #     if max_row > 1:
+    #         box_map = {(box.row, box.col): box for box in boxes}
+    #         for box in boxes:
+    #             if box.row == max_row:  # 最下面一行
+    #                 above_box = box_map.get((max_row - 1, box.col))
+    #                 if above_box:
+    #                     # 更新aGraspPoint_Top，使用上方箱子的z - GRID_PARAMS['z_spacing']*500
+    #                     box.aGraspPoint_Top = np.array([
+    #                         box.aGraspPoint_Side[0],
+    #                         box.aGraspPoint_Side[1] + GRID_PARAMS['y_spacing'] * 500,
+    #                         300
+    #                     ])
+    #                     # 调试打印更新后的箱子
+    #                     print(
+    #                         f"Updated Box id={box.id}, row={box.row}, col={box.col}, Top z={box.aGraspPoint_Top[2]}, Above z={above_box.aGraspPoint_Side[2]}")
     return boxes
 
 
