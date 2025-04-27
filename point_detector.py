@@ -3,7 +3,7 @@ import numpy as np
 import cupy as cp
 from ultralytics import YOLO
 from scipy.spatial import KDTree
-from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS
+from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS,GRID_PARAMS
 
 class PointDetector:
     def __init__(self, model_path):
@@ -113,7 +113,8 @@ class PointDetector:
 
         proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
 
-        results = self.model(proj_img, conf=YOLO_PARAMS['conf'], iou=YOLO_PARAMS['iou'])
+        results = self.model(proj_img, conf=YOLO_PARAMS['conf'], iou=YOLO_PARAMS['iou']) #yolo检测
+
         detected_boxes_info = []
         display_img = proj_img.copy()
         xz_points = points[:, [0, 2]]
@@ -144,8 +145,12 @@ class PointDetector:
 
                 X_3d = (cx_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z_3d = proj_params["z_max"] - (cy_pixel - proj_params["z_offset"]) / proj_params["scale"]
-                distance, idx = kdtree.query([[X_3d, Z_3d]], k=1)
-                matched_point = points[idx[0]]
+
+                k = 5
+                distance, idx = kdtree.query([[X_3d, Z_3d]], k=k)
+                neighbor_points = points[idx[0]]
+                mean_point_k = np.mean(neighbor_points, axis=0)
+
 
                 x1_norm, y1_norm, x2_norm, y2_norm = box_xyxyn
                 x1_pixel, y1_pixel = int(x1_norm * W), int(y1_norm * H)
@@ -156,13 +161,18 @@ class PointDetector:
                 X2_3d = (x2_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z2_3d = proj_params["z_max"] - (y2_pixel - proj_params["z_offset"]) / proj_params["scale"]
 
+                threshold_ratio = 0.2  # 允许20%的误差
                 width_3d = abs(X2_3d - X1_3d)
                 height_3d = abs(Z2_3d - Z1_3d)
 
-                detected_boxes_info.append({
-                    'center_3d': matched_point,
-                    'width_3d': width_3d,
-                    'height_3d': height_3d
-                })
+                # 判断宽度和高度是否接近标准尺寸
+                width_ok = abs(width_3d - GRID_PARAMS['x_spacing']) / GRID_PARAMS['x_spacing'] < threshold_ratio
+                height_ok = abs(height_3d - GRID_PARAMS['z_spacing']) / GRID_PARAMS['z_spacing'] < threshold_ratio
 
+                if width_ok and height_ok:
+                    detected_boxes_info.append({
+                        'center_3d': mean_point_k,
+                        'width_3d': width_3d,
+                        'height_3d': height_3d
+                    })
         return detected_boxes_info, proj_img, display_img

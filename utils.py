@@ -329,34 +329,40 @@ class Visualizer:
         thread.daemon = True
         thread.start()
 
-    def visualize_points(self, points, high_len):
+    def visualize_points(self, points, sorted_x=None, sorted_z=None):
         """
-        可视化 3D 点，区分高低点，非阻塞显示并保存带时间戳的图像，仅当 enable_display 为 True 时显示。
+        可视化 3D 点，并在每个点旁标注其 (row, col)，非阻塞显示并保存带时间戳的图像。
 
         参数：
-            points (np.ndarray)：形状为 (N, 3) 的 3D 点。
-            high_len (int)：分类为“高”的点数量。
-
-        抛出：
-            ValueError：如果 points 不是有效的 numpy 数组或 high_len 无效。
+            points (np.ndarray): 形状为 (N, 3) 的 3D 点。
+            sorted_x (np.ndarray): 每个点对应的列标签。
+            sorted_z (np.ndarray): 每个点对应的行标签。
         """
         if not isinstance(points, np.ndarray) or points.shape[1] != 3:
             raise ValueError("Points must be a numpy array of shape (N, 3)")
-        if not isinstance(high_len, int) or high_len < 0 or high_len > len(points):
-            raise ValueError("high_len must be a non-negative integer <= len(points)")
         if len(points) == 0:
             print("警告：没有点可可视化")
             return
+        if (sorted_x is not None and len(sorted_x) != len(points)) or \
+                (sorted_z is not None and len(sorted_z) != len(points)):
+            raise ValueError("sorted_x and sorted_z must be the same length as points if provided")
 
         fig = plt.figure(figsize=self.figsize)
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(points[:high_len, 0], points[:high_len, 1], points[:high_len, 2], c='r', label='High')
-        ax.scatter(points[high_len:, 0], points[high_len:, 1], points[high_len:, 2], c='b', label='Low')
+        ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='b', label='Points')
+
+        # 添加文本标签 (row, col)
+        if sorted_x is not None and sorted_z is not None:
+            for i, (x, y, z) in enumerate(points):
+                row = sorted_z[i]
+                col = sorted_x[i]
+                if row != -1 and col != -1:
+                    ax.text(x, y, z, f"({row},{col})", fontsize=8, color='black')
+
         self._set_equal_aspect(ax, points)
-        ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='Detected 3D Points')
+        ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='3D Points Visualization with Labels')
         ax.legend()
 
-        # 保存绘图
         save_path = self._get_timestamped_filename("visualize_points")
         try:
             plt.savefig(save_path, bbox_inches='tight')
@@ -364,7 +370,6 @@ class Visualizer:
         except Exception as e:
             print(f"保存绘图到 {save_path} 时出错：{e}")
 
-        # 非阻塞显示，仅当 enable_display 为 True 时执行
         if self.enable_display:
             plt.draw()
             plt.pause(self.display_duration)
@@ -634,7 +639,7 @@ def filter_by_y_density_and_visualize(
     print(f"统计过滤后的点数：{len(ind)} / 初始点数：{len(filtered_points)}")
 
     # 保存点云截图并以非阻塞方式显示
-    visualizer.save_point_cloud_screenshot(pcd_clean, "y_peak_filtered_point_cloud")
-    visualizer.display_point_cloud_non_blocking(pcd_clean, "Y Peak + Statistically Filtered Point Cloud (Original Colors)")
+    #visualizer.save_point_cloud_screenshot(pcd_clean, "y_peak_filtered_point_cloud")
+    visualizer.save_point_cloud_screenshot(pcd_clean, "Y Peak + Statistically Filtered Point Cloud (Original Colors)")
 
     return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)

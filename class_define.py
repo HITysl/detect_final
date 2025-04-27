@@ -36,7 +36,7 @@ class Tasks:
             row_counts[box.row] += 1
         for row in range(1, total_rows + 1):
             if row_counts[row] != 6:
-                self.flag = False
+                raise ValueError(f"Row {row} has {row_counts[row]} boxes, expected 6")
 
         self.aLeftBoxArray = self._reorder_boxes(
                 [box for box in boxes if box.side == 'left']

@@ -50,6 +50,17 @@ def process_detections(
     # 合并高低点云
     all_points = np.vstack((high_points, low_points))
     all_colors = np.vstack((high_colors, low_colors))
+
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(all_points)
+    # pcd.colors = o3d.utility.Vector3dVector(all_colors)
+    #
+    # vis = o3d.visualization.VisualizerWithEditing()
+    # vis.create_window()
+    # vis.add_geometry(pcd)
+    # vis.run()
+    # vis.destroy_window()
+
     # 预处理点云
     all_points, all_colors = preprocess_point_cloud(all_points, all_colors)
 
@@ -78,17 +89,17 @@ def process_detections(
     visualizer.display_image_non_blocking(all_proj_img, "All XZ Projection")
     visualizer.display_image_non_blocking(all_display_img, "All Detection Results")
 
-    # 提取 3D 中心
+    # 提取每个箱子 3D 中心
     all_points = np.array([box['center_3d'] for box in all_detected_info])
+
+
     indices = list(range(len(all_detected_info)))
-
-    # 可视化点
-    visualizer.visualize_points(all_points, len(all_detected_info))
-
     # 聚类和排序点
     points_2d = all_points[:, [0, 2]]
     x_labels, z_labels = processor.cluster_points(points_2d)
     sorted_x, sorted_z = processor.sort_labels(points_2d, x_labels, z_labels)
+
+    visualizer.visualize_points(all_points,sorted_x=sorted_x, sorted_z=sorted_z) # 带行列数的显示点
 
     second_row = np.where(sorted_z == 1)[0]
     if not len(second_row):
@@ -106,24 +117,14 @@ def process_detections(
     boxes = create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices)
     assign_box_sides(boxes)
 
-    if boxes:
-        max_row = max(box.row for box in boxes)
-        print(f"Max row: {max_row}")
-        if max_row > 1:
-            box_map = {(box.row, box.col): box for box in boxes}
-            for box in boxes:
-                if box.row == max_row:  # 最下面一行
-                    above_box = box_map.get((max_row - 1, box.col))
-                    if above_box:
-                        # 更新aGraspPoint_Top，使用上方箱子的z - GRID_PARAMS['z_spacing']*500
-                        box.aGraspPoint_Top = np.array([
-                            np.clip(box.aGraspPoint_Side[0],-400,400),
-                            np.clip(box.aGraspPoint_Side[1] + GRID_PARAMS['y_spacing'] * 500, None, 1510),
-                            300
-                        ])
+    # for box in boxes:
+    #     print(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+    #     print(
+    #         f"        Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+    #     print(
+    #         f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+    #     print(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
 
-
-    # 生成任务
     tasks = create_tasks(boxes)
 
     # 确保 OpenCV 窗口关闭

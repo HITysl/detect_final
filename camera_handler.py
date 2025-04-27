@@ -1,5 +1,6 @@
 import os
 import time
+import threading            # 新增
 import pyads
 from ctypes import sizeof
 from pyorbbecsdk import *
@@ -8,7 +9,9 @@ import cv2
 import numpy as np
 import logging
 import sys
+
 ENTER_KEY = 13
+ESC_KEY   = 27               # 保留原有常量
 
 # 配置日志
 logging.basicConfig(
@@ -16,12 +19,17 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s: %(levelname)s: %(message)s'
 )
-
 # 全局标志位
 last_low_start_flag_value = False
 last_high_start_flag_value = False
 low_pos_done_flag = False
 high_pos_done_flag = False
+
+# ---------------- 新增：掉线异常 -----------------
+class PLCConnectionLost(RuntimeError):
+    """心跳失败后抛出的异常（由主程序捕获并重启）"""
+    pass
+# ------------------------------------------------
 
 def retry(func, retry_interval=5, error_msg="Operation failed"):
     """
@@ -62,9 +70,36 @@ class CameraHandler:
         self.high_notify_handle = None
         self.high_user_handle = None
 
+        # -------- 新增：心跳相关 ---------
+        self._hb_thread = None
+        self._hb_stop_event = threading.Event()
+        self.plc_connection_lost = False         # 掉线标志
+        self.heartbeat_tag = "Camera.bCameraHeartBeat" # 请在 PLC 中新建 BOOL 变量
+        self.heartbeat_interval = 3              # 秒
+        # ---------------------------------
+
+    # -------- 新增：启动心跳线程 ----------
+    def _start_heartbeat(self):
+        def _heartbeat_loop():
+            while not self._hb_stop_event.is_set():
+                try:
+                    # 向 PLC 写 TRUE；写失败即认为掉线
+                    self.plc.write_by_name(self.heartbeat_tag, True, pyads.PLCTYPE_BOOL)
+                except pyads.ADSError as e:
+                    logging.error(f"Heartbeat write failed: {e}")
+                    self.plc_connection_lost = True
+                    break
+                time.sleep(self.heartbeat_interval)
+
+        self._hb_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
+        self._hb_thread.start()
+    # -------------------------------------
+
     def configure_camera(self):
         def try_configure():
+            print(11111111)
             device = self.ctx.create_net_device(self.ip, self.port)
+            print(22222222)
             config = Config()
             self.pipeline = Pipeline(device)
 
@@ -104,13 +139,13 @@ class CameraHandler:
                     handle, timestamp, value = self.plc.parse_notification(notification, data_type)
                     logging.info(f"Low position detection signal received: {value} at {timestamp}")
                     print(f"低位检测信号收到: {value} at {timestamp}")
-                    if value == True and last_low_start_flag_value == False:
+                    if value is True and last_low_start_flag_value is False:
                         low_pos_done_flag = True
                         logging.info("Low position signal changed from False to True, triggering capture")
                         print("低位信号从 False 变为 True，触发拍摄")
                     last_low_start_flag_value = value
-                except pyads.ADSError as e:
-                    logging.error(f"Low pos callback error: {e}")
+                except Exception as e:
+                    logging.error(f"Low pos callback error: {type(e).__name__}: {e}")
 
             def camera_high_pos_start_callback(notification, data):
                 global high_pos_done_flag, last_high_start_flag_value
@@ -119,7 +154,7 @@ class CameraHandler:
                     handle, timestamp, value = self.plc.parse_notification(notification, data_type)
                     logging.info(f"High position detection signal received: {value} at {timestamp}")
                     print(f"高位检测信号收到: {value} at {timestamp}")
-                    if value == True and last_high_start_flag_value == False:
+                    if value is True and last_high_start_flag_value is False:
                         high_pos_done_flag = True
                         logging.info("High position signal changed from False to True, triggering capture")
                         print("高位信号从 False 变为 True，触发拍摄")
@@ -138,6 +173,10 @@ class CameraHandler:
             attr = pyads.NotificationAttrib(sizeof(pyads.PLCTYPE_BOOL))
             self.high_notify_handle, self.high_user_handle = self.plc.add_device_notification(
                 'Camera.bInspection_PosHigh_Start', attr, camera_high_pos_start_callback)
+
+            # ---------- 新增：启动心跳 ----------
+            self._start_heartbeat()
+            # ----------------------------------
 
             return True
 
@@ -171,6 +210,10 @@ class CameraHandler:
 
     def capture_images(self, timeout=100):
         global low_pos_done_flag, high_pos_done_flag
+        # 检测掉线
+        if self.plc_connection_lost:
+            raise PLCConnectionLost("PLC connection lost")
+
         # 确保 images 文件夹存在
         save_dir = "images"
         if not os.path.exists(save_dir):
@@ -183,12 +226,17 @@ class CameraHandler:
         last_warning_time = start_time
         WARNING_CHECK_INTERVAL = 60  # 每60秒检查一次是否需要提示警告
 
+        DISPLAY_WIDTH = 1280
+        DISPLAY_HEIGHT = 800
+
         while True:
+            # 如果心跳线程已判断掉线，立即抛异常
+            if self.plc_connection_lost:
+                raise PLCConnectionLost("PLC connection lost")
+
             color_image_low, depth_image_low, depth_data_low = self.get_frames()
             if color_image_low is None or depth_image_low is None:
                 continue
-            DISPLAY_WIDTH = 1280
-            DISPLAY_HEIGHT = 800
 
             resized_color_image = cv2.resize(color_image_low, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
             cv2.imshow("Low Preview", resized_color_image)
@@ -196,7 +244,6 @@ class CameraHandler:
 
             # 检查低位信号
             if low_pos_done_flag or key == ENTER_KEY:
-                time.sleep(5)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"Low_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"Low_depth_{timestamp}.png")
@@ -238,6 +285,9 @@ class CameraHandler:
         last_warning_time = start_time
 
         while True:
+            if self.plc_connection_lost:
+                raise PLCConnectionLost("PLC connection lost")
+
             color_image_high, depth_image_high, depth_data_high = self.get_frames()
             if color_image_high is None or depth_image_high is None:
                 continue
@@ -247,7 +297,6 @@ class CameraHandler:
 
             # 检查高位信号
             if high_pos_done_flag or key == ENTER_KEY:
-                time.sleep(5)
                 timestamp = time.strftime("%Y%m%d_%H%M%S")
                 color_filename = os.path.join(save_dir, f"High_colour_{timestamp}.png")
                 depth_filename = os.path.join(save_dir, f"High_depth_{timestamp}.png")
@@ -267,8 +316,7 @@ class CameraHandler:
                     logging.error(f"Failed to write high pos done: {e}")
 
                 #return color_image_low, depth_data_low, color_image_high, depth_data_high
-                return color_image_low, depth_data_low, color_image_low, depth_data_low  #专门调试
-
+                return color_image_low, depth_data_low, color_image_low, depth_data_low
 
             # 每60秒记录警告并打印提示
             current_time = time.time()
@@ -285,6 +333,12 @@ class CameraHandler:
                 return None, None, None, None
 
     def stop(self):
+        # -------- 新增：停止心跳 ----------
+        self._hb_stop_event.set()
+        if self._hb_thread and self._hb_thread.is_alive():
+            self._hb_thread.join()
+        # ----------------------------------
+
         # 清理相机资源
         if self.pipeline:
             self.pipeline.stop()
