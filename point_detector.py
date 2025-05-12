@@ -3,7 +3,9 @@ import numpy as np
 import cupy as cp
 from ultralytics import YOLO
 from scipy.spatial import KDTree
-from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS,GRID_PARAMS
+from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS, GRID_PARAMS, IP_HOST_Csharp, IP_PORT_Csharp
+from utils import send_detections_Csharp
+
 
 class PointDetector:
     def __init__(self, model_path):
@@ -175,4 +177,5 @@ class PointDetector:
                         'width_3d': width_3d,
                         'height_3d': height_3d
                     })
+        send_detections_Csharp(results, detected_boxes_info, proj_img,IP_HOST_Csharp,IP_PORT_Csharp)
         return detected_boxes_info, proj_img, display_img

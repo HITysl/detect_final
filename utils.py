@@ -1,9 +1,11 @@
+import json
 import logging
 import os
+import socket
 import time
 import threading
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List, Any, Dict, Union
 import open3d as o3d
 import cv2
 import numpy as np
@@ -593,34 +595,50 @@ def filter_by_y_density_and_visualize(
         points: np.ndarray,
         colors: np.ndarray,
         visualizer: Visualizer,
+        known_y_min: float = 1.2255,
+        known_y_max: float = 1.4755,
+        max_y_threshold: float = 1.6,
         config: FilterConfig = FilterConfig()
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     根据 Y 值密度峰值过滤点云，并使用统计过滤去除离群点。
+    根据计算的 Y 最大值与经验值进行比对，如果超出阈值则使用已知的 Y 范围进行过滤。
     保存并以非阻塞方式可视化保留的点云（使用原始颜色）。
 
     参数：
         points：3D 点云 (N, 3)。
         colors：对应的颜色 (N, 3)。
         visualizer：Visualizer 实例，用于显示和保存。
+        known_y_min：已知 Y 值范围的下限。
+        known_y_max：已知 Y 值范围的上限。
+        max_y_threshold：用于比较的 Y 最大值阈值。
         config：过滤参数配置。
 
     返回：
         过滤后的点和颜色（NumPy 数组）。
     """
+    # 获取 Y 值
     y_vals = points[:, 1]
 
-    # 构建 Y 值直方图
+    # 构建 Y 值的直方图
     hist, bin_edges = np.histogram(y_vals, bins=np.arange(y_vals.min(), y_vals.max(), config.bin_width))
     max_bin_idx = np.argmax(hist)
 
-    # 找到主峰中心并设置保留范围
+    # 计算 Y 值的主峰中心和范围
     y_center = (bin_edges[max_bin_idx] + bin_edges[max_bin_idx + 1]) / 2
     y_min, y_max = y_center - config.y_range / 2, y_center + config.y_range / 2
 
-    print(f"保留 Y 值在 [{y_min:.4f}, {y_max:.4f}] 内的点")
+    # 打印计算得到的 Y 值范围
+    print(f"计算得到的 Y 值范围：[{y_min:.4f}, {y_max:.4f}]")
 
-    # 初始 Y 范围过滤
+    # 如果计算的 y_max 大于 max_y_threshold，则使用已知的 Y 值范围
+    if y_max > max_y_threshold:
+        print(f"y_max > {max_y_threshold}, 使用已知的 Y 范围 [{known_y_min}, {known_y_max}] 进行过滤")
+        y_min, y_max = known_y_min, known_y_max
+    else:
+        print(f"y_max 没有超出阈值，继续使用计算的 Y 范围")
+
+    # Y 范围过滤
     mask = (y_vals >= y_min) & (y_vals <= y_max)
     filtered_points = points[mask]
     filtered_colors = colors[mask]
@@ -636,10 +654,78 @@ def filter_by_y_density_and_visualize(
         std_ratio=config.outlier_std_ratio
     )
 
+    # 打印统计信息
     print(f"统计过滤后的点数：{len(ind)} / 初始点数：{len(filtered_points)}")
 
     # 保存点云截图并以非阻塞方式显示
-    #visualizer.save_point_cloud_screenshot(pcd_clean, "y_peak_filtered_point_cloud")
-    visualizer.save_point_cloud_screenshot(pcd_clean, "Y Peak + Statistically Filtered Point Cloud (Original Colors)")
+    visualizer.save_point_cloud_screenshot(pcd_clean, "Y Range + Statistically Filtered Point Cloud (Original Colors)")
 
     return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)
+
+from datetime import datetime
+import socket
+import json
+import cv2
+import numpy as np
+from typing import Any, Dict, List, Union
+
+def send_detections_Csharp(
+    results: List[Any],
+    box_3d_info: List[Dict[str, Union[List[float], float]]],
+    img: np.ndarray,
+    server_host: str,
+    server_port: int
+) -> None:
+    """
+    将 2D/3D 坐标打包到同一个 dict，中间字段顺序是：
+    coord_2d, width_2d, height_2d, confidence, coord_3d, width_3d, height_3d
+    然后连同 img 一起通过 TCP 发送给 C# 端。
+    """
+    # 1) 编码图像
+    success, img_encoded = cv2.imencode('.jpg', img)
+    if not success:
+        raise RuntimeError("Failed to encode image")
+    img_bytes = img_encoded.tobytes()
+
+    # 2) 拉平所有 2D 框 和置信度
+    bboxes_2d = results[0].boxes.xywh.cpu().numpy()   # (N,4)
+    confs     = results[0].boxes.conf.cpu().numpy()   # (N,)
+
+    # 3) 按顺序构造 detections
+    detections = []
+    for (bbox, conf), extra in zip(zip(bboxes_2d, confs), box_3d_info):
+        coord_3d = extra["center_3d"]
+        if isinstance(coord_3d, np.ndarray):
+            coord_3d = coord_3d.tolist()
+        cx, cy, w, h = map(float, bbox)
+        det = {
+            "coord_2d":   [cx, cy],
+            "width_2d":   w,
+            "height_2d":  h,
+            "confidence": float(conf),
+            "coord_3d":   coord_3d,
+            "width_3d":   extra["width_3d"],
+            "height_3d":  extra["height_3d"],
+        }
+        detections.append(det)
+
+    # 4) （可选）按 2D y→x 排序
+    detections.sort(key=lambda d: (d["coord_2d"][1], d["coord_2d"][0]))
+
+    # 5) 打包 JSON
+    payload = {
+        "timestamp": datetime.now().isoformat(),
+        "box_count": len(detections),
+        "detections": detections
+    }
+    json_bytes = json.dumps(payload, indent=2).encode('utf-8')
+
+    # 6) 发送 JSON + 图像
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect((server_host, server_port))
+        sock.sendall(len(json_bytes).to_bytes(4, 'big'))
+        sock.sendall(json_bytes)
+        sock.sendall(len(img_bytes).to_bytes(4, 'big'))
+        sock.sendall(img_bytes)
+
+    print(f"[send_detections] Sent {payload['box_count']} boxes at {payload['timestamp']}")

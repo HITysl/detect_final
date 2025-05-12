@@ -17,7 +17,6 @@ TRANSFORMATIONS = {
                     [-0.00634828, -0.91979487, -0.39234818,  1.63827078e+03],
                     [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
 }
-
 GRID_PARAMS = {
     'x_spacing': 0.4,
     'z_spacing': 0.3,
@@ -29,3 +28,9 @@ YOLO_PARAMS = {
     'conf': 0.5,
     'iou': 0.3
 }
+
+IP_CAMERA="192.168.1.30"
+IP_PLC='192.168.1.20.1.1'
+IP_PORT_Csharp=5001
+IP_HOST_Csharp='127.0.0.1'
+MODEL='E:\\Desktop\\car\\yolo11best.pt'

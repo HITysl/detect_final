@@ -97,9 +97,7 @@ class CameraHandler:
 
     def configure_camera(self):
         def try_configure():
-            print(11111111)
             device = self.ctx.create_net_device(self.ip, self.port)
-            print(22222222)
             config = Config()
             self.pipeline = Pipeline(device)
 

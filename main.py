@@ -25,6 +25,7 @@ from utils import Visualizer, transmit_to_plc, create_tasks
 from detection_pipeline import process_detections
 import cv2
 import logging
+from config import IP_CAMERA, IP_PLC, MODEL
 
 # 配置日志
 logging.basicConfig(
@@ -41,8 +42,8 @@ def main():
         camera = None  # 先占位，方便 finally 中引用
         try:
             # ----------------- 以下代码与原逻辑保持一致 -----------------
-            camera = CameraHandler(ip="192.168.1.30", plc_address="192.168.1.20.1.1")
-            detector = PointDetector("E:\\Desktop\\car\\yolo11best.pt")
+            camera = CameraHandler(ip=IP_CAMERA, plc_address=IP_PLC)
+            detector = PointDetector(MODEL)
             processor = PointProcessor()
             adjuster = PointAdjuster()
             visualizer = Visualizer(enable_display=False)
@@ -60,7 +61,10 @@ def main():
                         logging.warning("Capture failed or user exited, skipping cycle")
                         print("拍摄失败或用户退出，跳过本次循环")
                         continue
-
+                    # color_low='E:\\Desktop\\detect_final\\images\\Low_colour_20250427_164625.png'
+                    # depth_low = 'E:\\Desktop\\detect_final\\images\\Low_depth_20250427_164625.png'
+                    # color_high = 'E:\\Desktop\\detect_final\\images\\Low_colour_20250427_164625.png'
+                    # depth_high = 'E:\\Desktop\\detect_final\\images\\Low_depth_20250427_164625.png'
                     # 处理检测和任务
                     tasks = process_detections(detector, processor, adjuster, visualizer, color_low, depth_low, color_high, depth_high)
                     # tasks = Tasks(manual_box_list, total_rows=2, total_cols=6)
