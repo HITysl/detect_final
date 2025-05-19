@@ -1,34 +1,37 @@
+import json
 import numpy as np
-CAMERA_PARAMS = {
-    'fx': 1127.73, 'fy': 1127.76,
-    'cx': 958.572, 'cy': 523.067,
-    'k1': 0.0777894, 'k2': -0.108512, 'k3': 0.0456514,
-    'p1': 0.000139715, 'p2': -0.000322564
-}
-TRANSFORMATIONS = {
-    'T1': np.array([[ 9.9989617e-01, -0.01091452,  0.00940874,  6.3767635e+02],
-                    [-0.01293641, -0.39224771,  0.91976866, -2.7092501e+02],
-                    [-0.00634828, -0.91979487, -0.39234818,  2.55827078e+03],
-                    [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]),  #+920
-    'T2': np.array([[ 9.9989617e-01, -0.01091452,  0.00940874,  6.3767635e+02],
-                    [-0.01293641, -0.39224771,  0.91976866, -2.7092501e+02],
-                    [-0.00634828, -0.91979487, -0.39234818,  1.63827078e+03],
-                    [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
-}
-GRID_PARAMS = {
-    'x_spacing': 0.4,
-    'z_spacing': 0.3,
-    'y_spacing':0.3,
-    'row_count': None,
-    'col_count': None
-}
-YOLO_PARAMS = {
-    'conf': 0.5,
-    'iou': 0.3
-}
-BOX_WEIGHT = 10 #KG
-IP_CAMERA="192.168.1.30"
-IP_PLC='192.168.1.20.1.1'
-IP_PORT_Csharp=5001
-IP_HOST_Csharp='127.0.0.1'
-MODEL='E:\\Desktop\\car\\yolo11best.pt'
+import os
+
+# Determine the absolute path to the config.json file
+# Assuming config.py and config.json are in the same directory
+CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+def load_config(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        config_data = json.load(f)
+    return config_data
+
+_config_data = load_config(CONFIG_FILE_PATH)
+
+CAMERA_PARAMS = _config_data.get("CAMERA_PARAMS", {})
+TRANSFORMATIONS_RAW = _config_data.get("TRANSFORMATIONS", {})
+GRID_PARAMS = _config_data.get("GRID_PARAMS", {})
+YOLO_PARAMS = _config_data.get("YOLO_PARAMS", {})
+BOX_WEIGHT = _config_data.get("BOX_WEIGHT")
+IP_CAMERA = _config_data.get("IP_CAMERA")
+IP_PLC = _config_data.get("IP_PLC")
+IP_PORT_Csharp = _config_data.get("IP_PORT_Csharp")
+IP_HOST_Csharp = _config_data.get("IP_HOST_Csharp")
+MODEL = _config_data.get("MODEL")
+
+# Convert transformation matrices from lists to numpy arrays
+TRANSFORMATIONS = {}
+for key, value in TRANSFORMATIONS_RAW.items():
+    if isinstance(value, list): # Ensure it's a list before converting
+        TRANSFORMATIONS[key] = np.array(value)
+    else:
+        TRANSFORMATIONS[key] = value # Or handle error/default
+
+# Note: JSON null values are automatically converted to Python None by json.load().
+# So, GRID_PARAMS['row_count'] and GRID_PARAMS['col_count'] will be None if they are null in config.json.
+# Type conversions for other simple types (int, float, str) are also handled by json.load().
