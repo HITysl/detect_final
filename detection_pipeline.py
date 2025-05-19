@@ -60,6 +60,7 @@ def process_detections(
     vis.run()
     vis.destroy_window()
     # 预处理点云
+
     all_points, all_colors = preprocess_point_cloud(all_points, all_colors)
 
     pcd = o3d.geometry.PointCloud()
@@ -80,7 +81,7 @@ def process_detections(
     visualizer.display_point_cloud_non_blocking(pcd, "Initial Point Cloud")
 
     # 投影和检测
-    all_detected_info, all_proj_img, all_display_img = detector._project_and_detect(all_points, all_colors, "All")
+    all_detected_info, all_proj_img, all_display_img, box_account = detector._project_and_detect(all_points, all_colors, "All")
     visualizer.display_image_non_blocking(all_proj_img, "All XZ Projection")
     visualizer.display_image_non_blocking(all_display_img, "All Detection Results")
 
@@ -89,41 +90,18 @@ def process_detections(
 
     indices = list(range(len(all_detected_info)))
     # 聚类和排序点
-    points_2d = all_points[:, [0, 2]]
-    all_points = np.array([box['center_3d'] for box in all_detected_info])
 
-    x_lbl, y_lbl, z_lbl = processor.cluster_points(all_points)
+    z_lbl = processor.cluster_points(all_points)
 
-    sorted_x, sorted_y, sorted_z = processor.sort_labels(all_points, x_lbl, y_lbl, z_lbl)
+    sorted_x, sorted_y, sorted_z = processor.sort_labels(all_points, z_lbl)
 
     # 4. 可视化（标注 layer, row, col）
     visualizer.visualize_points(all_points,
                                 sorted_x=sorted_x,
                                 sorted_y=sorted_y,
                                 sorted_z=sorted_z)
-    # 只保留第一层
-    valid_layers = [l for l in np.unique(y_lbl) if l != -1]
-    layer_means = {l: all_points[y_lbl == l, 1].mean() for l in valid_layers}
-    first_layer = min(layer_means, key=layer_means.get)
 
-    # 4. 只保留第一层的点
-    mask = (y_lbl == first_layer)
-    points_l1 = all_points[mask]
-    x_lbl1 = x_lbl[mask]
-    y_lbl1 = y_lbl[mask]
-    z_lbl1 = z_lbl[mask]
-    # 5. 对这一层再聚类 → 排序重编码 → 可视化
-
-    sorted_x2, sorted_y2, sorted_z2 = processor.sort_labels(points_l1, x_lbl1, y_lbl1, z_lbl1)
-
-    visualizer.visualize_points(
-        points_l1,
-        sorted_x=sorted_x2,
-        sorted_y=sorted_y2,
-        sorted_z=sorted_z2
-    )
-
-    boxes = create_boxes(points_l1, all_detected_info, sorted_x2, sorted_z2, indices)
+    boxes = create_boxes(all_points, all_detected_info, sorted_x, sorted_z, indices)
     assign_box_sides(boxes)
 
 # 最下一行顶吸做下clip防止越界
@@ -142,7 +120,7 @@ def process_detections(
                             300
                         ])
 
-    tasks = create_tasks(boxes)
+    tasks = create_tasks(boxes, box_account)
 
 
     # 确保 OpenCV 窗口关闭

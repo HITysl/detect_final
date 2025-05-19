@@ -5,7 +5,9 @@ from ultralytics import YOLO
 from scipy.spatial import KDTree
 from config import CAMERA_PARAMS, TRANSFORMATIONS, YOLO_PARAMS, GRID_PARAMS, IP_HOST_Csharp, IP_PORT_Csharp
 from utils import send_detections_Csharp
-
+import logging
+import open3d as o3d
+logger = logging.getLogger(__name__)
 
 class PointDetector:
     def __init__(self, model_path):
@@ -93,33 +95,16 @@ class PointDetector:
         colors = (colors * 255).astype(np.uint8) if colors.max() <= 1.0 else colors
         depth_buffer = np.full((H, W), np.inf)
 
-        radius =2
-
-        # 1. 按 Y 从小到大（近到远）排序
-        order = np.argsort(points[:, 1])
-        pts_sorted = points[order]
-        cols_sorted = colors[order]
-
-        # 2. 计算所有点的像素坐标
-        js = np.floor((pts_sorted[:, 0] - x_min) * scale + x_offset).astype(int)
-        is_ = np.floor((z_max - pts_sorted[:, 2]) * scale + z_offset).astype(int)
-
-        # 3. 只保留落在图像范围内的点
-        valid = (is_ >= 0) & (is_ < H) & (js >= 0) & (js < W)
-        is_valid = is_[valid]
-        js_valid = js[valid]
-        cols_valid = cols_sorted[valid]
-
-        # 4. 找到每个 (i,j) 第一次出现的索引（即最前面点）
-        pixels = np.stack([is_valid, js_valid], axis=1)
-        # unique_pixels: 唯一的 (i,j)； idx: 它在 pixels 数组中的第一次出现位置
-        _, idx = np.unique(pixels, axis=0, return_index=True)
-
-        for k in idx:
-            i = is_valid[k]
-            j = js_valid[k]
-            color = cols_valid[k]
-            cv2.circle(proj_img, (j, i), radius, color.tolist(), -1)
+        radius = 3
+        for idx in range(len(points)):
+            X, Y, Z = points[idx]
+            color = colors[idx]
+            j = int((X - x_min) * scale + x_offset)
+            i = int((z_max - Z) * scale + z_offset)
+            if 0 <= i < H and 0 <= j < W:
+                if Y < depth_buffer[i, j]:
+                    cv2.circle(proj_img, (j, i), radius, color.tolist(), -1)
+                    depth_buffer[i, j] = Y
 
 
         kernel = np.ones((3, 3), np.uint8)
@@ -133,13 +118,9 @@ class PointDetector:
 
         img_opened = cv2.morphologyEx(proj_img, cv2.MORPH_OPEN, kernel, iterations=1)
         img_opened = cv2.medianBlur(img_opened, 3)
-        #gray = cv2.cvtColor(img_opened, cv2.COLOR_BGR2GRAY)
-
-        smoothed = cv2.bilateralFilter(img_opened, d=5, sigmaColor=75, sigmaSpace=25)
+        smoothed = cv2.bilateralFilter(img_opened, d=5, sigmaColor=35, sigmaSpace=20)
         laplacian = cv2.Laplacian(smoothed, cv2.CV_64F, ksize=3)
-        proj_img = np.uint8(np.clip(smoothed - 1 * laplacian, 0, 255))
-
-        #proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
+        proj_img = np.uint8(np.clip(smoothed - 0.4 * laplacian, 0, 255))
 
         cv2.imshow('after', proj_img)
 
@@ -164,8 +145,8 @@ class PointDetector:
             for box_xywhn, box_xyxyn in zip(xywhn, xyxyn):
                 cx_pixel = int(box_xywhn[0] * W)
                 cy_pixel = int(box_xywhn[1] * H)
-                if cy_pixel < 400 :
-                    continue
+                # if cy_pixel < 400 :
+                #     continue
                 w_pixel = int(box_xywhn[2] * W)
                 h_pixel = int(box_xywhn[3] * H)
                 x1 = cx_pixel - w_pixel // 2
@@ -201,7 +182,7 @@ class PointDetector:
                 X2_3d = (x2_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z2_3d = proj_params["z_max"] - (y2_pixel - proj_params["z_offset"]) / proj_params["scale"]
 
-                threshold_ratio = 0.5  # 允许20%的误差
+                threshold_ratio = 0.2  # 允许误差
                 width_3d = abs(X2_3d - X1_3d)
                 height_3d = abs(Z2_3d - Z1_3d)
 
@@ -209,11 +190,19 @@ class PointDetector:
                 width_ok = abs(width_3d - GRID_PARAMS['x_spacing']) / GRID_PARAMS['x_spacing'] < threshold_ratio
                 height_ok = abs(height_3d - GRID_PARAMS['z_spacing']) / GRID_PARAMS['z_spacing'] < threshold_ratio
 
+                # 记录筛选结果
                 if width_ok and height_ok:
+                    logger.info(f"箱子通过阈值筛选 - 中心点: {mean_point_k}, 宽度: {width_3d:.2f}, 高度: {height_3d:.2f}")
                     detected_boxes_info.append({
                         'center_3d': mean_point_k,
                         'width_3d': width_3d,
                         'height_3d': height_3d
                     })
+                else:
+                    if not width_ok:
+                        logger.warning(f"箱子宽度不符合要求 - 中心点: {mean_point_k}, 实际宽度: {width_3d:.2f}, 标准宽度: {GRID_PARAMS['x_spacing']:.2f}")
+                    if not height_ok:
+                        logger.warning(f"箱子高度不符合要求 - 中心点: {mean_point_k}, 实际高度: {height_3d:.2f}, 标准高度: {GRID_PARAMS['z_spacing']:.2f}")
+            box_account = len(detected_boxes_info)
         #send_detections_Csharp(results, detected_boxes_info, proj_img,IP_HOST_Csharp,IP_PORT_Csharp)
-        return detected_boxes_info, proj_img, display_img
+        return detected_boxes_info, proj_img, display_img, box_account

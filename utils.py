@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 from sklearn.cluster import KMeans
 from class_define import Box, Tasks
-from config import GRID_PARAMS
+from config import GRID_PARAMS, BOX_WEIGHT
 import numpy as np
 import socket
 import json
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 class FilterConfig:
     bin_width: float = 0.01             # 直方图 bin 宽度
     peak_prominence: float =20         # 峰值 prominence 阈值，可根据数据调节
-    peak_width: float = 0.1             # 保留峰附近 Δy 窗口宽度
-    outlier_nb_neighbors: int = 20      # 统计滤波 k 值
+    peak_width: float = 0.07             # 保留峰附近 Δy 窗口宽度
+    outlier_nb_neighbors: int = 50      # 统计滤波 k 值
     outlier_std_ratio: float = 2.0      # 统计滤波 std_ratio
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,9 @@ def transmit_to_plc(tasks):
     nRightBoxCount = int(tasks.nRightBoxCount)
     nTotalRow = int(tasks.nTotalRow)
     nTotalCol = int(tasks.nTotalCol)
-
+    nBoxAmount = int(tasks.box_account)
+    nBoxWeight= int(BOX_WEIGHT)
+    
     leftArm_Data = []
     rightArm_Data = []
     boxArray_Data = []
@@ -172,6 +174,8 @@ def transmit_to_plc(tasks):
             plc.write_by_name('Camera.aLeftBoxArrayFlat', leftArm_Data, pyads.PLCTYPE_ARR_INT(nLeftBoxCount * 9))
             plc.write_by_name('Camera.aRightBoxArrayFlat', rightArm_Data, pyads.PLCTYPE_ARR_INT(nRightBoxCount * 9))
             plc.write_by_name('Camera.aBoxArray',boxArray_Data,pyads.PLCTYPE_ARR_INT(len(boxArray_Data)))
+            plc.write_by_name('Camera.nBoxAmount', nBoxAmount, pyads.PLCTYPE_UINT)
+            plc.write_by_name('Camera.nBoxWeight', nBoxWeight, pyads.PLCTYPE_UINT)
             plc.write_by_name('Camera.bInspection_IPC_Done', True, pyads.PLCTYPE_BOOL)
             print("Data successfully written to PLC")
             logger.info("Data successfully written to PLC")
@@ -556,12 +560,12 @@ def assign_box_sides(boxes):
         logger.info("Warning: Not enough boxes to perform K-means clustering.")
         print("Warning: Not enough boxes to perform K-means clustering.")
 
-def create_tasks(boxes):
+def create_tasks(boxes, box_account):
     sorted_boxes = sorted(boxes, key=lambda b: b.id)
     merge_boxes_by_row_col(sorted_boxes)
     total_rows = max(box.row for box in boxes) if boxes else 0
     total_cols = max(box.col for box in boxes) if boxes else 0
-    return Tasks(sorted_boxes, total_rows, total_cols)
+    return Tasks(sorted_boxes, total_rows, total_cols, box_account)
 
 def create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices):
     boxes = []
@@ -679,7 +683,7 @@ def preprocess_point_cloud(points: np.ndarray,
                            colors: np.ndarray,
                            voxel_size: float = 0.009,
                            nb_neighbors: int = 30,
-                           std_ratio: float = 0.5,
+                           std_ratio: float = 0.8,
 
                            ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -771,52 +775,82 @@ def filter_by_y_peaks(
 
     # 3. 确定并剔除 Y 最大峰
     max_peak_y = peak_ys.max()
-    remove_mask = np.abs(y_vals - max_peak_y) <= config.peak_width
-    keep_mask = ~remove_mask
-    print(f"剔除 Y={max_peak_y:.4f} 峰附近 {np.sum(remove_mask)} 个点，剩余 {np.sum(keep_mask)} 个")
+    remove_mask_for_max_peak = np.abs(y_vals - max_peak_y) <= config.peak_width
+    mask_after_max_peak_removed = ~remove_mask_for_max_peak
+    print(f"剔除 Y={max_peak_y:.4f} 峰附近 {np.sum(remove_mask_for_max_peak)} 个点，剩余 {np.sum(mask_after_max_peak_removed)} 个")
 
-    # 4. 基于剩余点重新构造直方图
-    y_vals_filtered = y_vals[keep_mask]
-    hist_filtered, bin_edges_filtered = np.histogram(y_vals_filtered, bins=bins)
-    hist_smooth_filtered = gaussian_filter1d(hist_filtered, sigma=0.5)
+    # 4. 基于剩余点进行处理
+    y_values_after_max_peak_removed = y_vals[mask_after_max_peak_removed]
+    points_after_max_peak_removed = points[mask_after_max_peak_removed]
+    colors_after_max_peak_removed = colors[mask_after_max_peak_removed]
 
-    # 5. 重新找峰值
-    peaks_filtered, _ = find_peaks(
-        hist_smooth_filtered,
-        prominence=config.peak_prominence,
-        height=5000
-    )
-    if len(peaks_filtered) == 0:
-        print("剔除最大峰后未检测到其他峰值，返回剩余点云")
-        filtered_points = points[keep_mask]
-        filtered_colors = colors[keep_mask]
+    filtered_points: np.ndarray
+    filtered_colors: np.ndarray
+
+    if len(y_values_after_max_peak_removed) == 0:
+        print("剔除最大峰后无任何剩余点，返回空点云")
+        filtered_points = np.array([]).reshape(0, points.shape[1])
+        filtered_colors = np.array([]).reshape(0, colors.shape[1])
     else:
-        peak_ys_filtered = bin_centers[peaks_filtered]
-        print(f"剔除最大峰后检测到峰值 Y：{peak_ys_filtered}")
+        # 对剩余点重新构造直方图
+        hist_remaining, bin_edges_remaining = np.histogram(y_values_after_max_peak_removed, bins=bins)
+        hist_smooth_remaining = gaussian_filter1d(hist_remaining, sigma=0.5)
 
-        # 6. 构建保留掩码：保留剩余峰附近 Δy 窗口内的点
-        keep_mask_refined = np.zeros_like(y_vals, dtype=bool)
-        for yp in peak_ys_filtered:
-            keep_mask_refined[keep_mask] |= np.abs(y_vals_filtered - yp) <= config.peak_width
+        # 5. 在剩余点中重新找峰值
+        peaks_remaining, _ = find_peaks(
+            hist_smooth_remaining,
+            prominence=config.peak_prominence,
+            height=5000  # 保持与原逻辑一致，或使用 config.min_peak_height
+        )
 
-        print(f"保留 {len(peak_ys_filtered)} 个峰附近的点，共计 {np.sum(keep_mask_refined)} 个")
+        if len(peaks_remaining) == 0:
+            print("剔除最大峰后未检测到其他峰值，返回空点云")
+            filtered_points = np.array([]).reshape(0, points.shape[1])
+            filtered_colors = np.array([]).reshape(0, colors.shape[1])
+        else:
+            peak_ys_remaining = bin_centers[peaks_remaining]
+            print(f"剔除最大峰后检测到峰值 Y：{peak_ys_remaining}")
 
-        # 7. 应用最终掩码
-        filtered_points = points[keep_mask_refined]
-        filtered_colors = colors[keep_mask_refined]
+            # 从剩余峰中选择 Y 值最小的峰
+            min_y_target_peak = peak_ys_remaining.min()
+            print(f"在剩余峰中选择 Y 值最小的峰: {min_y_target_peak:.4f} 进行保留")
+
+            # 构建掩码以保留选定最小峰值附近的点
+            # 此掩码应用于 y_values_after_max_peak_removed
+            keep_mask_for_min_peak = np.abs(y_values_after_max_peak_removed - min_y_target_peak) <= config.peak_width
+
+            filtered_points = points_after_max_peak_removed[keep_mask_for_min_peak]
+            filtered_colors = colors_after_max_peak_removed[keep_mask_for_min_peak]
+            print(f"保留 Y={min_y_target_peak:.4f} 峰附近 {len(filtered_points)} 个点")
 
     # 8. 统计离群点剔除
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(filtered_points)
-    pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
-    pcd_clean, ind = pcd.remove_statistical_outlier(
-        nb_neighbors=config.outlier_nb_neighbors,
-        std_ratio=config.outlier_std_ratio
-    )
+    pcd_clean = o3d.geometry.PointCloud() # 初始化以确保在任何分支中都定义了 pcd_clean
 
-    print(f"统计滤波后剩余：{len(ind)} / {len(filtered_points)}")
+    if filtered_points.shape[0] == 0:
+        print("最终筛选点云为空，跳过统计滤波。")
+        # pcd_clean 已经是一个空的 PointCloud
+    else:
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(filtered_points)
+        pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
+        
+        # 只有在点云非空时才进行统计滤波
+        if pcd.has_points():
+            pcd_clean, ind = pcd.remove_statistical_outlier(
+                nb_neighbors=config.outlier_nb_neighbors,
+                std_ratio=config.outlier_std_ratio
+            )
+            print(f"统计滤波后剩余：{len(ind)} / {len(filtered_points)}")
+        else:
+            # 如果 filtered_points 非空但 pcd 由于某种原因没有点 (理论上不应发生)
+            print("点云对象无点，跳过统计滤波。")
+            pcd_clean = pcd # 保持为无点的pcd
+
     if visualizer is not None:
+        screenshot_title = "Y-Gap Filtered Point Cloud"
+        if not pcd_clean.has_points():
+            screenshot_title += " (Final Result Empty)"
         visualizer.save_point_cloud_screenshot(
-            pcd_clean, "Y-Gap Filtered Point Cloud"
+            pcd_clean, screenshot_title
         )
     return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)

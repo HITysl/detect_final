@@ -25,11 +25,12 @@ class Box:
                 f"width_3d={self.width_3d:.3f}, height_3d={self.height_3d:.3f})")
 
 class Tasks:
-    def __init__(self, boxes, total_rows, total_cols):
+    def __init__(self, boxes, total_rows, total_cols, box_account):
         self.nTotalRow = total_rows
         self.nTotalCol = total_cols
         self.flag = True
         self.all_box_origin=boxes
+        self.box_account = box_account
         # 检查每行箱子数量是否为6
         # row_counts = defaultdict(int)
         # for box in boxes:
