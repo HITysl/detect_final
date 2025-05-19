@@ -1,3 +1,4 @@
+import logging
 import time
 import cv2
 import numpy as np
@@ -7,18 +8,16 @@ from dataclasses import dataclass
 from typing import Tuple, List, Dict
 import os
 from datetime import datetime
-
 from config import GRID_PARAMS
 from point_detector import PointDetector
 from point_processor import PointProcessor
 from point_adjuster import PointAdjuster
-from utils import Visualizer, preprocess_point_cloud, create_boxes, assign_box_sides, create_tasks, \
-    filter_by_y_density_and_visualize
+from utils import Visualizer, preprocess_point_cloud, create_boxes, assign_box_sides, create_tasks
 
 SAVE_DIR = "images"
 if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
-
+logger = logging.getLogger(__name__)
 def process_detections(
         detector: PointDetector,
         processor: PointProcessor,
@@ -51,28 +50,17 @@ def process_detections(
     all_points = np.vstack((high_points, low_points))
     all_colors = np.vstack((high_colors, low_colors))
 
-    # pcd = o3d.geometry.PointCloud()
-    # pcd.points = o3d.utility.Vector3dVector(all_points)
-    # pcd.colors = o3d.utility.Vector3dVector(all_colors)
-    #
-    # vis = o3d.visualization.VisualizerWithEditing()
-    # vis.create_window()
-    # vis.add_geometry(pcd)
-    # vis.run()
-    # vis.destroy_window()
-
-    # 预处理点云
-    all_points, all_colors = preprocess_point_cloud(all_points, all_colors)
-
-    # 可视化初始点云
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(all_points)
     pcd.colors = o3d.utility.Vector3dVector(all_colors)
-    visualizer.save_point_cloud_screenshot(pcd, "initial_point_cloud")
-    visualizer.display_point_cloud_non_blocking(pcd, "Initial Point Cloud")
 
-    # 过滤点云
-    all_points, all_colors = filter_by_y_density_and_visualize(all_points, all_colors, visualizer)
+    vis = o3d.visualization.VisualizerWithEditing()
+    vis.create_window()
+    vis.add_geometry(pcd)
+    vis.run()
+    vis.destroy_window()
+    # 预处理点云
+    all_points, all_colors = preprocess_point_cloud(all_points, all_colors)
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(all_points)
@@ -84,6 +72,13 @@ def process_detections(
     vis.run()
     vis.destroy_window()
 
+    # 可视化初始点云
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(all_points)
+    pcd.colors = o3d.utility.Vector3dVector(all_colors)
+    visualizer.save_point_cloud_screenshot(pcd, "initial_point_cloud")
+    visualizer.display_point_cloud_non_blocking(pcd, "Initial Point Cloud")
+
     # 投影和检测
     all_detected_info, all_proj_img, all_display_img = detector._project_and_detect(all_points, all_colors, "All")
     visualizer.display_image_non_blocking(all_proj_img, "All XZ Projection")
@@ -92,31 +87,46 @@ def process_detections(
     # 提取每个箱子 3D 中心
     all_points = np.array([box['center_3d'] for box in all_detected_info])
 
-
     indices = list(range(len(all_detected_info)))
     # 聚类和排序点
     points_2d = all_points[:, [0, 2]]
-    x_labels, z_labels = processor.cluster_points(points_2d)
-    sorted_x, sorted_z = processor.sort_labels(points_2d, x_labels, z_labels)
+    all_points = np.array([box['center_3d'] for box in all_detected_info])
 
-    visualizer.visualize_points(all_points,sorted_x=sorted_x, sorted_z=sorted_z) # 带行列数的显示点
+    x_lbl, y_lbl, z_lbl = processor.cluster_points(all_points)
 
-    second_row = np.where(sorted_z == 1)[0]
-    if not len(second_row):
-        raise ValueError("第二行没有点")
-    ref_idx = np.where(sorted_x[second_row] == 2)[0]
-    if not len(ref_idx):
-        raise ValueError("第二行的第三列没有点")
-    ref_point = points_2d[second_row[ref_idx[0]]]
+    sorted_x, sorted_y, sorted_z = processor.sort_labels(all_points, x_lbl, y_lbl, z_lbl)
 
-    grid_points, origin_x, origin_z = adjuster.generate_grid_points(ref_point)
-    adjusted_points = adjuster.adjust_points(all_points, points_2d, sorted_x, sorted_z, origin_x, origin_z)
-    visualizer.plot_all_2d(points_2d, grid_points, adjusted_points, sorted_x, sorted_z)
+    # 4. 可视化（标注 layer, row, col）
+    visualizer.visualize_points(all_points,
+                                sorted_x=sorted_x,
+                                sorted_y=sorted_y,
+                                sorted_z=sorted_z)
+    # 只保留第一层
+    valid_layers = [l for l in np.unique(y_lbl) if l != -1]
+    layer_means = {l: all_points[y_lbl == l, 1].mean() for l in valid_layers}
+    first_layer = min(layer_means, key=layer_means.get)
 
-    # 创建并分配箱子
-    boxes = create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices)
+    # 4. 只保留第一层的点
+    mask = (y_lbl == first_layer)
+    points_l1 = all_points[mask]
+    x_lbl1 = x_lbl[mask]
+    y_lbl1 = y_lbl[mask]
+    z_lbl1 = z_lbl[mask]
+    # 5. 对这一层再聚类 → 排序重编码 → 可视化
+
+    sorted_x2, sorted_y2, sorted_z2 = processor.sort_labels(points_l1, x_lbl1, y_lbl1, z_lbl1)
+
+    visualizer.visualize_points(
+        points_l1,
+        sorted_x=sorted_x2,
+        sorted_y=sorted_y2,
+        sorted_z=sorted_z2
+    )
+
+    boxes = create_boxes(points_l1, all_detected_info, sorted_x2, sorted_z2, indices)
     assign_box_sides(boxes)
 
+# 最下一行顶吸做下clip防止越界
     if boxes:
         max_row = max(box.row for box in boxes)
         print(f"Max row: {max_row}")
@@ -126,21 +136,14 @@ def process_detections(
                 if box.row == max_row:  # 最下面一行
                     above_box = box_map.get((max_row - 1, box.col))
                     if above_box:
-                        # 更新aGraspPoint_Top，使用上方箱子的z - GRID_PARAMS['z_spacing']*500
                         box.aGraspPoint_Top = np.array([
                             np.clip(box.aGraspPoint_Side[0], -400, 400),
                             np.clip(box.aGraspPoint_Side[1] + GRID_PARAMS['y_spacing'] * 500, None, 1510),
                             300
                         ])
-    # for box in boxes:
-    #     print(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
-    #     print(
-    #         f"        Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
-    #     print(
-    #         f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
-    #     print(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
 
     tasks = create_tasks(boxes)
+
 
     # 确保 OpenCV 窗口关闭
     cv2.destroyAllWindows()

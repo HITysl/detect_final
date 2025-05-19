@@ -1,65 +1,70 @@
-import json
-import logging
 import os
-import socket
-import time
+import random
 import threading
 from dataclasses import dataclass
-from typing import Tuple, List, Any, Dict, Union
+from typing import Tuple, Optional, List, Any, Dict, Union
 import open3d as o3d
-import cv2
-import numpy as np
 import pyads
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 from sklearn.cluster import KMeans
 from class_define import Box, Tasks
 from config import GRID_PARAMS
+import numpy as np
+import socket
+import json
+import time
+import logging
+import cv2
 from datetime import datetime
+logger = logging.getLogger(__name__)
 
 @dataclass
 class FilterConfig:
-    bin_width: float = 0.01
-    y_range: float = 0.25
-    outlier_nb_neighbors: int = 80
-    outlier_std_ratio: float = 2.0
-
-logging.basicConfig(
-    filename='plc_camera_log.txt',
-    level=logging.INFO,
-    format='%(asctime)s: %(levelname)s: %(message)s'
-)
+    bin_width: float = 0.01             # 直方图 bin 宽度
+    peak_prominence: float =20         # 峰值 prominence 阈值，可根据数据调节
+    peak_width: float = 0.1             # 保留峰附近 Δy 窗口宽度
+    outlier_nb_neighbors: int = 20      # 统计滤波 k 值
+    outlier_std_ratio: float = 2.0      # 统计滤波 std_ratio
+logger = logging.getLogger(__name__)
 
 # Point Cloud Processing
-def preprocess_point_cloud(points, colors, voxel_size=0.005, nb_neighbors=20, std_ratio=0.5, min_cluster_size=1000):
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    pcd.colors = o3d.utility.Vector3dVector(colors)
+import numpy as np
+import open3d as o3d
+import matplotlib.pyplot as plt
 
-    # 体素下采样
-    if voxel_size > 0:
-        pcd = pcd.voxel_down_sample(voxel_size)
-
-    if nb_neighbors > 0 and std_ratio > 0:
-        filtered_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
-        pcd = filtered_pcd
-
-    if min_cluster_size > 0:
-        labels = np.array(pcd.cluster_dbscan(eps=0.02, min_points=10, print_progress=False))
-        if len(labels) > 0 and np.any(labels >= 0):
-            largest_label = np.argmax(np.bincount(labels[labels >= 0]))  # 找到最大簇
-            mask = labels == largest_label  # 只保留最大簇
-            pcd = pcd.select_by_index(np.where(mask)[0])  # 直接过滤
-
-    return np.asarray(pcd.points), np.asarray(pcd.colors)
 
 def transmit_to_plc(tasks):
     # ========== 打印任务结构 ==========
     print("========== Task Summary ==========")
+    logger.info("========== Task Summary ==========")
+    logger.info(str(tasks))  # 触发 Tasks.__str__()
     print(tasks)  # 触发 Tasks.__str__()
 
-    # ========== 打印每个箱子详细信息 ==========
+
+    print("========== Orgin Boxes ==========")
+    logger.info("========== Orgin Boxes ==========")
+    for box in tasks.all_box_origin:
+        print(f"[origin] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        print(
+            f"       Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+        print(
+            f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+        print(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+        logger.info(f"[origin] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        logger.info(
+            f"       Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+        logger.info(
+            f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+        logger.info(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+
+
+
+
     print("========== Left Boxes ==========")
+    logger.info("========== Left Boxes ==========")
     for box in tasks.aLeftBoxArray:
         print(f"[Left] ID: {box.id}, Row: {box.row}, Col: {box.col}")
         print(
@@ -67,8 +72,15 @@ def transmit_to_plc(tasks):
         print(
             f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
         print(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+        logger.info(f"[Left] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        logger.info(
+            f"       Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
+        logger.info(
+            f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
+        logger.info(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
 
     print("========== Right Boxes ==========")
+    logger.info("========== Right Boxes ==========")
     for box in tasks.aRightBoxArray:
         print(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
         print(
@@ -76,27 +88,12 @@ def transmit_to_plc(tasks):
         print(
             f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
         print(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
-
-    logging.info("========== Task Summary ==========")
-    logging.info(str(tasks))  # 触发 Tasks.__str__()
-
-    logging.info("========== Left Boxes ==========")
-    for box in tasks.aLeftBoxArray:
-        logging.info(f"[Left] ID: {box.id}, Row: {box.row}, Col: {box.col}")
-        logging.info(
-            f"       Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
-        logging.info(
-            f"       Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
-        logging.info(f"       Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
-
-    logging.info("========== Right Boxes ==========")
-    for box in tasks.aRightBoxArray:
-        logging.info(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
-        logging.info(
+        logger.info(f"[Right] ID: {box.id}, Row: {box.row}, Col: {box.col}")
+        logger.info(
             f"        Top Grasp Point : x={box.aGraspPoint_Top[0]:.1f}, y={box.aGraspPoint_Top[1]:.1f}, z={box.aGraspPoint_Top[2]:.1f}")
-        logging.info(
+        logger.info(
             f"        Side Grasp Point: x={box.aGraspPoint_Side[0]:.1f}, y={box.aGraspPoint_Side[1]:.1f}, z={box.aGraspPoint_Side[2]:.1f}")
-        logging.info(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
+        logger.info(f"        Width: {box.width_3d:.1f} mm, Height: {box.height_3d:.1f} mm")
 
     nbox_l = int(GRID_PARAMS['x_spacing'] * 1000)
     nbox_w = int(GRID_PARAMS['y_spacing'] * 1000)
@@ -109,6 +106,21 @@ def transmit_to_plc(tasks):
 
     leftArm_Data = []
     rightArm_Data = []
+    boxArray_Data = []
+    for box in tasks.all_box_origin:
+        flat = [
+            int(box.id),
+            int(box.row),
+            int(box.col),
+            int(box.aGraspPoint_Top[0]),
+            int(box.aGraspPoint_Top[1]),
+            int(box.aGraspPoint_Top[2]),
+            int(box.aGraspPoint_Side[0]),
+            int(box.aGraspPoint_Side[1]),
+            int(box.aGraspPoint_Side[2])
+        ]
+        boxArray_Data.extend(flat)
+    logger.info(f"Flattened Original Boxes data length: {len(boxArray_Data)}")
 
     for box in tasks.aLeftBoxArray:
         flat_data = [
@@ -159,10 +171,11 @@ def transmit_to_plc(tasks):
             plc.write_by_name('Camera.aHeightEachRow', aHeightEachRow, pyads.PLCTYPE_ARR_INT(nTotalRow))
             plc.write_by_name('Camera.aLeftBoxArrayFlat', leftArm_Data, pyads.PLCTYPE_ARR_INT(nLeftBoxCount * 9))
             plc.write_by_name('Camera.aRightBoxArrayFlat', rightArm_Data, pyads.PLCTYPE_ARR_INT(nRightBoxCount * 9))
+            plc.write_by_name('Camera.aBoxArray',boxArray_Data,pyads.PLCTYPE_ARR_INT(len(boxArray_Data)))
             plc.write_by_name('Camera.bInspection_IPC_Done', True, pyads.PLCTYPE_BOOL)
             print("Data successfully written to PLC")
-            logging.info("Data successfully written to PLC")
-            logging.info("Camera.bInspection_IPC_Done set to True")
+            logger.info("Data successfully written to PLC")
+            logger.info("Camera.bInspection_IPC_Done set to True")
             break
         except pyads.ADSError as e:
             elapsed_time = time.time() - start_time
@@ -331,51 +344,40 @@ class Visualizer:
         thread.daemon = True
         thread.start()
 
-    def visualize_points(self, points, sorted_x=None, sorted_z=None):
+    def visualize_points(self, points, sorted_x=None, sorted_y=None, sorted_z=None):
         """
-        可视化 3D 点，并在每个点旁标注其 (row, col)，非阻塞显示并保存带时间戳的图像。
-
-        参数：
-            points (np.ndarray): 形状为 (N, 3) 的 3D 点。
-            sorted_x (np.ndarray): 每个点对应的列标签。
-            sorted_z (np.ndarray): 每个点对应的行标签。
+        在 3D 散点图里标注 (layer, row, col)。
         """
-        if not isinstance(points, np.ndarray) or points.shape[1] != 3:
-            raise ValueError("Points must be a numpy array of shape (N, 3)")
-        if len(points) == 0:
-            print("警告：没有点可可视化")
-            return
-        if (sorted_x is not None and len(sorted_x) != len(points)) or \
-                (sorted_z is not None and len(sorted_z) != len(points)):
-            raise ValueError("sorted_x and sorted_z must be the same length as points if provided")
+        if sorted_x is None or sorted_y is None or sorted_z is None:
+            raise ValueError("必须同时提供 sorted_x, sorted_y, sorted_z")
 
         fig = plt.figure(figsize=self.figsize)
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='b', label='Points')
+        ax.scatter(points[:,0], points[:,1], points[:,2], c='b', label='Points')
 
-        # 添加文本标签 (row, col)
-        if sorted_x is not None and sorted_z is not None:
-            for i, (x, y, z) in enumerate(points):
-                row = sorted_z[i]
-                col = sorted_x[i]
-                if row != -1 and col != -1:
-                    ax.text(x, y, z, f"({row},{col})", fontsize=8, color='black')
+        # 标注 (layer, row, col)
+        for i, (x, y, z) in enumerate(points):
+            l, r, c = sorted_y[i], sorted_z[i], sorted_x[i]
+            if l != -1 and r != -1 and c != -1:
+                ax.text(x, y, z, f"({l},{r},{c})", fontsize=8, color='black')
 
         self._set_equal_aspect(ax, points)
-        ax.set(xlabel='X (m)', ylabel='Y (m)', zlabel='Z (m)', title='3D Points Visualization with Labels')
+        ax.set(xlabel='X', ylabel='Y', zlabel='Z',
+               title='3D Points with (layer,row,col)')
         ax.legend()
 
-        save_path = self._get_timestamped_filename("visualize_points")
-        try:
-            plt.savefig(save_path, bbox_inches='tight')
-            print(f"绘图保存到 {save_path}")
-        except Exception as e:
-            print(f"保存绘图到 {save_path} 时出错：{e}")
+        base = self._get_timestamped_filename("visualize_with_layers")
+        # 如果 base 已经包含 .png 后缀，就插在 .png 之前，否则随意拼一个后缀
+        name, ext = os.path.splitext(base)
+        rand_suffix = random.randint(0, 9999)
+        save_path = f"{name}_{rand_suffix:04d}{ext}"
+
+        plt.savefig(save_path, bbox_inches='tight')
 
         if self.enable_display:
-            plt.draw()
-            plt.pause(self.display_duration)
+            plt.draw(); plt.pause(self.display_duration)
         plt.close(fig)
+        print(f"保存：{save_path}")
 
     def visualize_comparison(self, original, filtered):
         """
@@ -524,8 +526,11 @@ def merge_boxes_by_row_col(box_list):
     for box in box_list:
         key = (box.row, box.col)
         box_groups[key].append(box)
-    for key, group in box_groups.items():
+    for (row, col), group in box_groups.items():
         if len(group) > 1:
+            msg = f"WARNING: 在 (row={row}, col={col}) 检测到 {len(group)} 个 box，已合并抓取点"
+            logger.warning(msg)
+            print(msg)
             avg_coords = np.mean([box.aGraspPoint_Side for box in group], axis=0)
             for box in group:
                 box.aGraspPoint_Side = avg_coords
@@ -548,6 +553,7 @@ def assign_box_sides(boxes):
                 box.aGraspPoint_Side[0] -= 1200
                 box.aGraspPoint_Top[0] -= 1200
     else:
+        logger.info("Warning: Not enough boxes to perform K-means clustering.")
         print("Warning: Not enough boxes to perform K-means clustering.")
 
 def create_tasks(boxes):
@@ -590,85 +596,6 @@ def create_boxes(adjusted_points, all_detected_info, sorted_x, sorted_z, indices
     #                         f"Updated Box id={box.id}, row={box.row}, col={box.col}, Top z={box.aGraspPoint_Top[2]}, Above z={above_box.aGraspPoint_Side[2]}")
     return boxes
 
-
-def filter_by_y_density_and_visualize(
-        points: np.ndarray,
-        colors: np.ndarray,
-        visualizer: Visualizer,
-        known_y_min: float = 1.2255,
-        known_y_max: float = 1.4755,
-        max_y_threshold: float = 1.6,
-        config: FilterConfig = FilterConfig()
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    根据 Y 值密度峰值过滤点云，并使用统计过滤去除离群点。
-    根据计算的 Y 最大值与经验值进行比对，如果超出阈值则使用已知的 Y 范围进行过滤。
-    保存并以非阻塞方式可视化保留的点云（使用原始颜色）。
-
-    参数：
-        points：3D 点云 (N, 3)。
-        colors：对应的颜色 (N, 3)。
-        visualizer：Visualizer 实例，用于显示和保存。
-        known_y_min：已知 Y 值范围的下限。
-        known_y_max：已知 Y 值范围的上限。
-        max_y_threshold：用于比较的 Y 最大值阈值。
-        config：过滤参数配置。
-
-    返回：
-        过滤后的点和颜色（NumPy 数组）。
-    """
-    # 获取 Y 值
-    y_vals = points[:, 1]
-
-    # 构建 Y 值的直方图
-    hist, bin_edges = np.histogram(y_vals, bins=np.arange(y_vals.min(), y_vals.max(), config.bin_width))
-    max_bin_idx = np.argmax(hist)
-
-    # 计算 Y 值的主峰中心和范围
-    y_center = (bin_edges[max_bin_idx] + bin_edges[max_bin_idx + 1]) / 2
-    y_min, y_max = y_center - config.y_range / 2, y_center + config.y_range / 2
-
-    # 打印计算得到的 Y 值范围
-    print(f"计算得到的 Y 值范围：[{y_min:.4f}, {y_max:.4f}]")
-
-    # 如果计算的 y_max 大于 max_y_threshold，则使用已知的 Y 值范围
-    if y_max > max_y_threshold:
-        print(f"y_max > {max_y_threshold}, 使用已知的 Y 范围 [{known_y_min}, {known_y_max}] 进行过滤")
-        y_min, y_max = known_y_min, known_y_max
-    else:
-        print(f"y_max 没有超出阈值，继续使用计算的 Y 范围")
-
-    # Y 范围过滤
-    mask = (y_vals >= y_min) & (y_vals <= y_max)
-    filtered_points = points[mask]
-    filtered_colors = colors[mask]
-
-    # 创建临时点云用于过滤
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(filtered_points)
-    pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
-
-    # 统计离群点移除
-    pcd_clean, ind = pcd.remove_statistical_outlier(
-        nb_neighbors=config.outlier_nb_neighbors,
-        std_ratio=config.outlier_std_ratio
-    )
-
-    # 打印统计信息
-    print(f"统计过滤后的点数：{len(ind)} / 初始点数：{len(filtered_points)}")
-
-    # 保存点云截图并以非阻塞方式显示
-    visualizer.save_point_cloud_screenshot(pcd_clean, "Y Range + Statistically Filtered Point Cloud (Original Colors)")
-
-    return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)
-
-from datetime import datetime
-import socket
-import json
-import cv2
-import numpy as np
-from typing import Any, Dict, List, Union
-
 def send_detections_Csharp(
     results: List[Any],
     box_3d_info: List[Dict[str, Union[List[float], float]]],
@@ -680,10 +607,12 @@ def send_detections_Csharp(
     将 2D/3D 坐标打包到同一个 dict，中间字段顺序是：
     coord_2d, width_2d, height_2d, confidence, coord_3d, width_3d, height_3d
     然后连同 img 一起通过 TCP 发送给 C# 端。
+    如果发送失败，最多重试 5 次；连续 5 次失败后抛出异常。
     """
     # 1) 编码图像
     success, img_encoded = cv2.imencode('.jpg', img)
     if not success:
+        logger.error("Failed to encode image")
         raise RuntimeError("Failed to encode image")
     img_bytes = img_encoded.tobytes()
 
@@ -695,7 +624,7 @@ def send_detections_Csharp(
     detections = []
     for (bbox, conf), extra in zip(zip(bboxes_2d, confs), box_3d_info):
         coord_3d = extra["center_3d"]
-        if isinstance(coord_3d, np.ndarray):
+        if hasattr(coord_3d, "tolist"):
             coord_3d = coord_3d.tolist()
         cx, cy, w, h = map(float, bbox)
         det = {
@@ -720,12 +649,174 @@ def send_detections_Csharp(
     }
     json_bytes = json.dumps(payload, indent=2).encode('utf-8')
 
-    # 6) 发送 JSON + 图像
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.connect((server_host, server_port))
-        sock.sendall(len(json_bytes).to_bytes(4, 'big'))
-        sock.sendall(json_bytes)
-        sock.sendall(len(img_bytes).to_bytes(4, 'big'))
-        sock.sendall(img_bytes)
+    # 6) 发送 JSON + 图像，带重试逻辑
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((server_host, server_port))
+                sock.sendall(len(json_bytes).to_bytes(4, 'big'))
+                sock.sendall(json_bytes)
+                sock.sendall(len(img_bytes).to_bytes(4, 'big'))
+                sock.sendall(img_bytes)
+            msg = f"[send_detections] attempt {attempt}/{max_retries} Sent {payload['box_count']} boxes at {payload['timestamp']}"
+            logger.info(msg)
+            print(msg)
+            break  # 发送成功，跳出重试
+        except Exception as e:
+            warn = f"[send_detections] attempt {attempt} failed: {e}"
+            logger.warning(warn)
+            print(warn)
+            time.sleep(0.5)  # 间隔 500ms 再试
+    else:
+        # 连续 max_retries 次都失败
+        err = f"[send_detections] failed after {max_retries} attempts"
+        logger.error(err)
+        print(err)
+        raise RuntimeError(err)
 
-    print(f"[send_detections] Sent {payload['box_count']} boxes at {payload['timestamp']}")
+def preprocess_point_cloud(points: np.ndarray,
+                           colors: np.ndarray,
+                           voxel_size: float = 0.009,
+                           nb_neighbors: int = 30,
+                           std_ratio: float = 0.5,
+
+                           ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    1) 体素下采样
+    2) 统计离群点去除
+    3) 显示一次 Y 轴直方图
+    4) 基于 Y 缺口过滤背景 + 二次统计滤波
+    返回最终的点与颜色数组（保持与原来相同的 return 形式）
+    """
+    # 构建 PointCloud
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+
+    # 体素下采样
+    if voxel_size > 0:
+        pcd = pcd.voxel_down_sample(voxel_size)
+
+    # 统计滤波去噪
+    if nb_neighbors > 0 and std_ratio > 0:
+        pcd, _ = pcd.remove_statistical_outlier(
+            nb_neighbors=nb_neighbors,
+            std_ratio=std_ratio
+        )
+    ys = np.asarray(pcd.points)[:, 1]
+    plt.figure(figsize=(8, 4))
+    plt.hist(ys, bins=100)
+    plt.title("Point Cloud Y-Value Histogram (After Pre-filtering)")
+    plt.xlabel("Y value")
+    plt.ylabel("Point Count")
+    plt.tight_layout()
+    plt.show()
+
+    filtered_pts, filtered_clrs = filter_by_y_peaks(
+        points=np.asarray(pcd.points),
+        colors=np.asarray(pcd.colors),
+        visualizer=None
+    )
+
+    pcd.points = o3d.utility.Vector3dVector(filtered_pts)
+    pcd.colors = o3d.utility.Vector3dVector(filtered_clrs)
+
+    ys = np.asarray(pcd.points)[:, 1]
+    plt.figure(figsize=(8, 4))
+    plt.hist(ys, bins=100)
+    plt.title("Point Cloud Y-Value Histogram (After Pre-filtering)")
+    plt.xlabel("Y value")
+    plt.ylabel("Point Count")
+    plt.tight_layout()
+    plt.show()
+
+    return np.asarray(pcd.points), np.asarray(pcd.colors)
+
+def filter_by_y_peaks(
+    points: np.ndarray,
+    colors: np.ndarray,
+    visualizer: Optional[Visualizer] = None,
+    config: FilterConfig = FilterConfig()
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    基于 Y 轴方向的直方图峰值筛选：
+    1) 找峰，不用最高，只要明显高；
+    2) 去除 Y 最大峰的那一簇；
+    3) 保留剩余峰附近 Δy 窗口内的点。
+    """
+    y_vals = points[:, 1]
+
+    # 1. 构造直方图
+    bins = np.arange(y_vals.min(),
+                     y_vals.max() + config.bin_width,
+                     config.bin_width)
+    hist, bin_edges = np.histogram(y_vals, bins=bins)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    hist_smooth = gaussian_filter1d(hist, sigma=0.5)
+    # 2. 找峰值
+    peaks, props = find_peaks(
+        hist_smooth,
+        prominence=config.peak_prominence,
+        distance=10,
+        height=5000
+    )
+    if len(peaks) == 0:
+        print("未检测到明显峰值，返回原点云")
+        return points, colors
+
+    peak_ys = bin_centers[peaks]
+    print(f"检测到峰值 Y：{peak_ys}")
+
+    # 3. 确定并剔除 Y 最大峰
+    max_peak_y = peak_ys.max()
+    remove_mask = np.abs(y_vals - max_peak_y) <= config.peak_width
+    keep_mask = ~remove_mask
+    print(f"剔除 Y={max_peak_y:.4f} 峰附近 {np.sum(remove_mask)} 个点，剩余 {np.sum(keep_mask)} 个")
+
+    # 4. 基于剩余点重新构造直方图
+    y_vals_filtered = y_vals[keep_mask]
+    hist_filtered, bin_edges_filtered = np.histogram(y_vals_filtered, bins=bins)
+    hist_smooth_filtered = gaussian_filter1d(hist_filtered, sigma=0.5)
+
+    # 5. 重新找峰值
+    peaks_filtered, _ = find_peaks(
+        hist_smooth_filtered,
+        prominence=config.peak_prominence,
+        height=5000
+    )
+    if len(peaks_filtered) == 0:
+        print("剔除最大峰后未检测到其他峰值，返回剩余点云")
+        filtered_points = points[keep_mask]
+        filtered_colors = colors[keep_mask]
+    else:
+        peak_ys_filtered = bin_centers[peaks_filtered]
+        print(f"剔除最大峰后检测到峰值 Y：{peak_ys_filtered}")
+
+        # 6. 构建保留掩码：保留剩余峰附近 Δy 窗口内的点
+        keep_mask_refined = np.zeros_like(y_vals, dtype=bool)
+        for yp in peak_ys_filtered:
+            keep_mask_refined[keep_mask] |= np.abs(y_vals_filtered - yp) <= config.peak_width
+
+        print(f"保留 {len(peak_ys_filtered)} 个峰附近的点，共计 {np.sum(keep_mask_refined)} 个")
+
+        # 7. 应用最终掩码
+        filtered_points = points[keep_mask_refined]
+        filtered_colors = colors[keep_mask_refined]
+
+    # 8. 统计离群点剔除
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(filtered_points)
+    pcd.colors = o3d.utility.Vector3dVector(filtered_colors)
+    pcd_clean, ind = pcd.remove_statistical_outlier(
+        nb_neighbors=config.outlier_nb_neighbors,
+        std_ratio=config.outlier_std_ratio
+    )
+
+    print(f"统计滤波后剩余：{len(ind)} / {len(filtered_points)}")
+    if visualizer is not None:
+        visualizer.save_point_cloud_screenshot(
+            pcd_clean, "Y-Gap Filtered Point Cloud"
+        )
+    return np.asarray(pcd_clean.points), np.asarray(pcd_clean.colors)

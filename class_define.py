@@ -29,14 +29,14 @@ class Tasks:
         self.nTotalRow = total_rows
         self.nTotalCol = total_cols
         self.flag = True
-
+        self.all_box_origin=boxes
         # 检查每行箱子数量是否为6
-        row_counts = defaultdict(int)
-        for box in boxes:
-            row_counts[box.row] += 1
-        for row in range(1, total_rows + 1):
-            if row_counts[row] != 6:
-                raise ValueError(f"Row {row} has {row_counts[row]} boxes, expected 6")
+        # row_counts = defaultdict(int)
+        # for box in boxes:
+        #     row_counts[box.row] += 1
+        # for row in range(1, total_rows + 1):
+        #     if row_counts[row] != 6:
+        #         raise ValueError(f"Row {row} has {row_counts[row]} boxes, expected 6")
 
         self.aLeftBoxArray = self._reorder_boxes(
                 [box for box in boxes if box.side == 'left']

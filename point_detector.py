@@ -93,27 +93,60 @@ class PointDetector:
         colors = (colors * 255).astype(np.uint8) if colors.max() <= 1.0 else colors
         depth_buffer = np.full((H, W), np.inf)
 
-        radius = 2
-        for idx in range(len(points)):
-            X, Y, Z = points[idx]
-            color = colors[idx]
-            j = int((X - x_min) * scale + x_offset)
-            i = int((z_max - Z) * scale + z_offset)
-            if 0 <= i < H and 0 <= j < W:
-                if Y < depth_buffer[i, j]:
-                    cv2.circle(proj_img, (j, i), radius, color.tolist(), -1)
-                    depth_buffer[i, j] = Y
+        radius =2
+
+        # 1. 按 Y 从小到大（近到远）排序
+        order = np.argsort(points[:, 1])
+        pts_sorted = points[order]
+        cols_sorted = colors[order]
+
+        # 2. 计算所有点的像素坐标
+        js = np.floor((pts_sorted[:, 0] - x_min) * scale + x_offset).astype(int)
+        is_ = np.floor((z_max - pts_sorted[:, 2]) * scale + z_offset).astype(int)
+
+        # 3. 只保留落在图像范围内的点
+        valid = (is_ >= 0) & (is_ < H) & (js >= 0) & (js < W)
+        is_valid = is_[valid]
+        js_valid = js[valid]
+        cols_valid = cols_sorted[valid]
+
+        # 4. 找到每个 (i,j) 第一次出现的索引（即最前面点）
+        pixels = np.stack([is_valid, js_valid], axis=1)
+        # unique_pixels: 唯一的 (i,j)； idx: 它在 pixels 数组中的第一次出现位置
+        _, idx = np.unique(pixels, axis=0, return_index=True)
+
+        for k in idx:
+            i = is_valid[k]
+            j = js_valid[k]
+            color = cols_valid[k]
+            cv2.circle(proj_img, (j, i), radius, color.tolist(), -1)
+
 
         kernel = np.ones((3, 3), np.uint8)
+
+        cv2.imshow('orgin',proj_img)
+
+        key = cv2.waitKey(0)  # 等待按键；参数是等待毫秒数，0 表示无限等待
+        if key == 27:  # 如果按下 ESC 键（ASCII 27），也可以做特殊处理
+            print("ESC pressed, closing window")
+        cv2.destroyAllWindows()  # 关闭所有 OpenCV 创建的窗口
+
         img_opened = cv2.morphologyEx(proj_img, cv2.MORPH_OPEN, kernel, iterations=1)
         img_opened = cv2.medianBlur(img_opened, 3)
-        gray = cv2.cvtColor(img_opened, cv2.COLOR_BGR2GRAY)
+        #gray = cv2.cvtColor(img_opened, cv2.COLOR_BGR2GRAY)
 
-        smoothed = cv2.bilateralFilter(gray, d=5, sigmaColor=75, sigmaSpace=25)
+        smoothed = cv2.bilateralFilter(img_opened, d=5, sigmaColor=75, sigmaSpace=25)
         laplacian = cv2.Laplacian(smoothed, cv2.CV_64F, ksize=3)
-        sharpened = np.uint8(np.clip(smoothed - 1 * laplacian, 0, 255))
+        proj_img = np.uint8(np.clip(smoothed - 1 * laplacian, 0, 255))
 
-        proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
+        #proj_img = cv2.cvtColor(sharpened, cv2.COLOR_GRAY2BGR)
+
+        cv2.imshow('after', proj_img)
+
+        key = cv2.waitKey(0)  # 等待按键；参数是等待毫秒数，0 表示无限等待
+        if key == 27:  # 如果按下 ESC 键（ASCII 27），也可以做特殊处理
+            print("ESC pressed, closing window")
+        cv2.destroyAllWindows()  # 关闭所有 OpenCV 创建的窗口
 
         results = self.model(proj_img, conf=YOLO_PARAMS['conf'], iou=YOLO_PARAMS['iou']) #yolo检测
 
@@ -148,10 +181,15 @@ class PointDetector:
                 X_3d = (cx_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z_3d = proj_params["z_max"] - (cy_pixel - proj_params["z_offset"]) / proj_params["scale"]
 
-                k = 5
+                k = 20
                 distance, idx = kdtree.query([[X_3d, Z_3d]], k=k)
                 neighbor_points = points[idx[0]]
-                mean_point_k = np.mean(neighbor_points, axis=0)
+
+                topk_y = 3
+                order_y_desc = np.argsort(neighbor_points[:, 1])[::-1]
+                topk_indices = order_y_desc[:topk_y]
+                topk_points = neighbor_points[topk_indices]
+                mean_point_k = np.mean(topk_points, axis=0)
 
 
                 x1_norm, y1_norm, x2_norm, y2_norm = box_xyxyn
@@ -163,7 +201,7 @@ class PointDetector:
                 X2_3d = (x2_pixel - proj_params["x_offset"]) / proj_params["scale"] + proj_params["x_min"]
                 Z2_3d = proj_params["z_max"] - (y2_pixel - proj_params["z_offset"]) / proj_params["scale"]
 
-                threshold_ratio = 0.2  # 允许20%的误差
+                threshold_ratio = 0.5  # 允许20%的误差
                 width_3d = abs(X2_3d - X1_3d)
                 height_3d = abs(Z2_3d - Z1_3d)
 
@@ -177,5 +215,5 @@ class PointDetector:
                         'width_3d': width_3d,
                         'height_3d': height_3d
                     })
-        send_detections_Csharp(results, detected_boxes_info, proj_img,IP_HOST_Csharp,IP_PORT_Csharp)
+        #send_detections_Csharp(results, detected_boxes_info, proj_img,IP_HOST_Csharp,IP_PORT_Csharp)
         return detected_boxes_info, proj_img, display_img
